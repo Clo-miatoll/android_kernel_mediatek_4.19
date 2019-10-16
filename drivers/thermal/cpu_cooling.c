@@ -77,7 +77,7 @@ struct cpufreq_cooling_device {
 	struct list_head node;
 	struct time_in_idle *idle_time;
 	struct cpu_cooling_ops *plat_ops;
-	struct dev_pm_qos_request qos_req;
+	struct freq_qos_request qos_req;
 };
 
 static DEFINE_MUTEX(cooling_list_lock);
@@ -283,8 +283,8 @@ static int cpufreq_set_cur_state(struct thermal_cooling_device *cdev,
 		return cpufreq_cdev->plat_ops->ceil_limit(cpufreq_cdev->policy->cpu,
 							  clip_freq);
 	else
-		return dev_pm_qos_update_request(&cpufreq_cdev->qos_req,
-						 clip_freq);
+		return freq_qos_update_request(&cpufreq_cdev->qos_req,
+					       clip_freq);
 }
 
 #ifdef CONFIG_ENERGY_MODEL
@@ -539,9 +539,9 @@ __cpufreq_cooling_register(struct device_node *np,
 		 cpufreq_cdev->id);
 	cpufreq_cdev->plat_ops = plat_ops;
 
-	ret = dev_pm_qos_add_request(dev, &cpufreq_cdev->qos_req,
-				     DEV_PM_QOS_MAX_FREQUENCY,
-				     get_state_freq(cpufreq_cdev, 0));
+	ret = freq_qos_add_request(&policy->constraints,
+				   &cpufreq_cdev->qos_req, FREQ_QOS_MAX,
+				   get_state_freq(cpufreq_cdev, 0));
 	if (ret < 0) {
 		pr_err("%s: Failed to add freq constraint (%d)\n", __func__,
 		       ret);
@@ -561,7 +561,7 @@ __cpufreq_cooling_register(struct device_node *np,
 	return cdev;
 
 remove_qos_req:
-	dev_pm_qos_remove_request(&cpufreq_cdev->qos_req);
+	freq_qos_remove_request(&cpufreq_cdev->qos_req);
 free_idle_time:
 	kfree(cpufreq_cdev->idle_time);
 free_cdev:
@@ -683,7 +683,7 @@ void cpufreq_cooling_unregister(struct thermal_cooling_device *cdev)
 	mutex_unlock(&cooling_list_lock);
 
 	thermal_cooling_device_unregister(cdev);
-	dev_pm_qos_remove_request(&cpufreq_cdev->qos_req);
+	freq_qos_remove_request(&cpufreq_cdev->qos_req);
 	kfree(cpufreq_cdev->idle_time);
 	kfree(cpufreq_cdev);
 }
