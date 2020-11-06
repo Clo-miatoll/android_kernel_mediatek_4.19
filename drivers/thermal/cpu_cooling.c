@@ -262,6 +262,7 @@ static int cpufreq_set_cur_state(struct thermal_cooling_device *cdev,
 {
 	struct cpufreq_cooling_device *cpufreq_cdev = cdev->devdata;
 	unsigned int clip_freq;
+	int ret;
 
 	/* Request state should be less than max_level */
 	if (WARN_ON(state > cpufreq_cdev->max_level))
@@ -272,19 +273,25 @@ static int cpufreq_set_cur_state(struct thermal_cooling_device *cdev,
 		return 0;
 
 	clip_freq = get_state_freq(cpufreq_cdev, state);
-	cpufreq_cdev->cpufreq_state = state;
 
 	/* Check if the device has a platform mitigation function that
 	 * can handle the CPU freq mitigation, if not, notify cpufreq
 	 * framework.
 	 */
 	if (cpufreq_cdev->plat_ops &&
-		cpufreq_cdev->plat_ops->ceil_limit)
-		return cpufreq_cdev->plat_ops->ceil_limit(cpufreq_cdev->policy->cpu,
+		cpufreq_cdev->plat_ops->ceil_limit) {
+		ret = cpufreq_cdev->plat_ops->ceil_limit(cpufreq_cdev->policy->cpu,
 							  clip_freq);
-	else
-		return freq_qos_update_request(&cpufreq_cdev->qos_req,
+		if (ret < 0)
+			cpufreq_cdev->cpufreq_state = state;
+	} else {
+		ret = freq_qos_update_request(&cpufreq_cdev->qos_req,
 					       clip_freq);
+		if (ret > 0)
+			cpufreq_cdev->cpufreq_state = state;
+	}
+
+	return ret;
 }
 
 #ifdef CONFIG_ENERGY_MODEL
