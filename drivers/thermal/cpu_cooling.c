@@ -279,17 +279,28 @@ static int cpufreq_set_cur_state(struct thermal_cooling_device *cdev,
 	 * framework.
 	 */
 	if (cpufreq_cdev->plat_ops &&
-		cpufreq_cdev->plat_ops->ceil_limit) {
+		cpufreq_cdev->plat_ops->ceil_limit)
 		ret = cpufreq_cdev->plat_ops->ceil_limit(cpufreq_cdev->policy->cpu,
 							  clip_freq);
-		if (ret < 0)
-			cpufreq_cdev->cpufreq_state = state;
-	} else {
+	else
 		ret = freq_qos_update_request(&cpufreq_cdev->qos_req,
 					       clip_freq);
-		if (ret > 0)
-			cpufreq_cdev->cpufreq_state = state;
-	}
+
+	/*
+	 * This condition captures errors from both
+	 * freq_qos_update_request and ceil_limit().
+	 *
+	 * freq_qos_update_request() returns negative on error, 0
+	 * for no change, and 1 for change, we want to update
+	 * cpufreq_state regardless of if there is a change or not.
+	 *
+	 * ceil_limit() returns 0 on success and negative for failure.
+	 *
+	 * In either cases, we won't end up updating cpufreq_state if
+	 * there is an error from any of the two methods.
+	 */
+	if (ret >= 0)
+		cpufreq_cdev->cpufreq_state = state;
 
 	return ret;
 }
