@@ -74,3 +74,4 @@ obj-$(CONFIG_MTK_COMBO_BT) += bt/mt66xx/wmt/
 obj-$(CONFIG_MTK_COMBO_GPS) += gps/
 obj-$(CONFIG_MTK_FMRADIO) += fmradio/
 obj-$(CONFIG_MTK_CONNFEM) += connfem/
+obj-$(CONFIG_MTK_FMRADIO) += fmradio/
