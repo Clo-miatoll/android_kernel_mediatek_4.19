@@ -797,6 +797,7 @@ config GCOV_PROFILE_FTRACE
 	  Note that on a kernel compiled with this config, ftrace will
 	  run significantly slower.
 
+
 endif # FTRACE
 
 endif # TRACING_SUPPORT
