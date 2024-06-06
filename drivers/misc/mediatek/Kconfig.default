@@ -77,6 +77,7 @@ config ANDROID_DEFAULT_SETTING
 	select FUSE_FS
 	select FUSE_BPF
 	select FUTEX
+	select GKI_HIDDEN_GPU_CONFIGS
 	select HARDENED_USERCOPY
 	select HID_GENERIC
 	select HID_NINTENDO
@@ -256,6 +257,7 @@ config ANDROID_DEFAULT_SETTING
 	select SHMEM
 	select SIGNALFD
 	select SND
+	select SONY_FF
 	select SOUND
 	select STACKPROTECTOR
 	select STACKPROTECTOR_STRONG
