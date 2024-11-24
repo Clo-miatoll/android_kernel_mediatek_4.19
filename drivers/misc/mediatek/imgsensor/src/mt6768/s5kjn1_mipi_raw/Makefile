@@ -13,3 +13,4 @@
 obj-y += s5kjn1_eeprom.o
 obj-y += s5kjn1mipiraw_Sensor.o
 
+

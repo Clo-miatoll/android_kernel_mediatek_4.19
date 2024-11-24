@@ -427,6 +427,7 @@ config MTK_PERFORMANCE_MODULE
 	  Select "y" if you want to enable performance features.
 	  Select "n" if unsure.
 
+source "drivers/misc/mediatek/usb_boost/Kconfig"
 endmenu # PPT
 
 menu "TinySys"

@@ -22,6 +22,7 @@ endif
 obj-y += perfmgr_main.o
 obj-y += base/
 
+
 #ifeq (,$(findstring mt8,$(CONFIG_MTK_PLATFORM)))
 obj-y += boost_ctrl/
 #endif
