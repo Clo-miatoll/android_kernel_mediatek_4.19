@@ -15,7 +15,6 @@ config MTK_CMDQ
 	  driver. The CMDQ is used to help read/write registers with critical
 	  time limitation, such as updating display configuration during the
 	  vblank.
-
 config MTK_INFRACFG
 	bool "MediaTek INFRACFG Support"
 	select REGMAP
