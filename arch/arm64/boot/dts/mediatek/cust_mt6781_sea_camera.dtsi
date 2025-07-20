@@ -614,7 +614,7 @@
 	pinctrl-68 = <&camera_pins_cam4_mclk_6ma>;
 	pinctrl-69 = <&camera_pins_cam4_mclk_8ma>;
 
-	cam0_enable_sensor = "s5khm2sd_main_ofilm_mipi_raw s5khm2sd_main_semco_mipi_raw ov64b40_main_sunny_mipi_raw ov64b40_main_aac_mipi_raw ov64b40_main_ofilm_mipi_raw";
+	cam0_enable_sensor = "s5khm2sp_main_sunny_mipi_raw s5khm2sd_main_ofilm_mipi_raw s5khm2sd_main_semco_mipi_raw ov64b40_main_sunny_mipi_raw ov64b40_main_aac_mipi_raw ov64b40_main_ofilm_mipi_raw";
 	cam1_enable_sensor = "imx471_front_sunny_mipi_raw imx471_front_ofilm_mipi_raw";
 	cam2_enable_sensor = "imx355_ultra_ofilm_mipi_raw s5k4h7_ultra_sunny_mipi_raw";
 	cam3_enable_sensor = "ov02b1b_depth_sunny_mipi_raw ov02b1b_depth_truly_mipi_raw ov02b1b_depth_sunny2_mipi_raw";

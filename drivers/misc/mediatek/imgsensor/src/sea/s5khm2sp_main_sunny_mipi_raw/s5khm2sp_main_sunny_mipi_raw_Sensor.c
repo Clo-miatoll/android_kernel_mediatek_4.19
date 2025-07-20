@@ -59,14 +59,14 @@
 static DEFINE_SPINLOCK(imgsensor_drv_lock);
 
 static struct imgsensor_info_struct imgsensor_info = {
-	.sensor_id = S5KHM2SP_SUNNY_SENSOR_ID,		//record sensor id defined in Kd_imgsensor.h
+	.sensor_id = S5KHM2SP_MAIN_SUNNY_SENSOR_ID,		//record sensor id defined in Kd_imgsensor.h
 
 	.checksum_value = 0x47a75476,		//checksum value for Camera Auto Test
 
 	.pre = {
 		.pclk = 1600000000,
 		.linelength  = 14368,
-		.framelength = 3704,
+		.framelength = 3710,
 		.startx = 0,
 		.starty = 0,
 		.grabwindow_width  = 4000,
@@ -78,7 +78,7 @@ static struct imgsensor_info_struct imgsensor_info = {
 	.cap = {//cap same as preview
 		.pclk = 1600000000,
 		.linelength  = 14368,
-		.framelength = 3704,
+		.framelength = 3710,
 		.startx = 0,
 		.starty = 0,
 		.grabwindow_width  = 4000,
@@ -90,7 +90,7 @@ static struct imgsensor_info_struct imgsensor_info = {
 	.normal_video = {//video same as preview
 		.pclk = 1600000000,
 		.linelength  = 14368,
-		.framelength = 3704,
+		.framelength = 3710,
 		.startx = 0,
 		.starty = 0,
 		.grabwindow_width  = 4000,
@@ -123,19 +123,7 @@ static struct imgsensor_info_struct imgsensor_info = {
 		.max_framerate = 300,
 		.mipi_pixel_rate = 630370000,
 	},
-	.custom1 = {//stereo same as preview
-		.pclk = 1600000000,
-		.linelength  = 14368,
-		.framelength = 3704,
-		.startx = 0,
-		.starty = 0,
-		.grabwindow_width  = 4000,
-		.grabwindow_height = 3000,
-		.mipi_data_lp2hs_settle_dc = 0x22,
-		.max_framerate = 300,
-		.mipi_pixel_rate = 615600000,
-	},
-	.custom2 = {//slow motion 1080P 120fps(4SUMA2A2)
+	.custom1 = {//slow motion 1080P 120fps(4SUMA2A2)
 		.pclk = 1600000000,
 		.linelength = 5696,
 		.framelength = 2340,
@@ -147,7 +135,7 @@ static struct imgsensor_info_struct imgsensor_info = {
 		.max_framerate = 1200,
 		.mipi_pixel_rate = 891936000,
 	},
-	.custom3 = {//9M 60FPS (4SUM)
+	.custom2 = {//9M 60FPS (4SUM)
 		.pclk = 1600000000,
 		.linelength = 10272,
 		.framelength = 2594,
@@ -159,7 +147,7 @@ static struct imgsensor_info_struct imgsensor_info = {
 		.max_framerate = 600,
 		.mipi_pixel_rate = 875520000,
 	},
-	.custom4 = {/*full size capture*/
+	.custom3 = {/*full size capture*/
 		.pclk = 1600000000,
 		.linelength  = 16632,
 		.framelength = 9620,
@@ -171,7 +159,7 @@ static struct imgsensor_info_struct imgsensor_info = {
 		.max_framerate = 100,
 		.mipi_pixel_rate = 1378944000,
 	},
-	.custom5 = {/*in sensor zoom4x*/
+	.custom4 = {/*in sensor zoom4x*/
 		.pclk = 1600000000,
 		.linelength  = 16632,
 		.framelength = 3206,
@@ -183,10 +171,10 @@ static struct imgsensor_info_struct imgsensor_info = {
 		.max_framerate = 300,
 		.mipi_pixel_rate = 1023264000,
 	},
-	.custom6 = {//9M 60FPS (4SUM)
+	.custom5 = {//9M 60FPS (4SUM)
 		.pclk = 1600000000,
-		.linelength  = 14368,
-		.framelength = 4630,
+                .linelength  = 14368,
+                .framelength = 3710,
 		.startx = 0,
 		.starty = 0,
 		.grabwindow_width  = 4000,
@@ -205,7 +193,7 @@ static struct imgsensor_info_struct imgsensor_info = {
 	.min_gain_iso = 50,
 	.gain_step = 1,
 	.gain_type = 1,
-	.max_frame_length = 0x36626A,//max framelength by sensor register's limitation
+	.max_frame_length = 0xFFFF,//max framelength by sensor register's limitation
 	.ae_shut_delay_frame = 0,	//shutter delay frame for AE cycle, 2 frame with ispGain_delay-shut_delay=2-0=2
 	.ae_sensor_gain_delay_frame = 0,//sensor gain delay frame for AE cycle,2 frame with ispGain_delay-sensor_gain_delay=2-0=2
 	.ae_ispGain_delay_frame = 2,//isp gain delay frame for AE cycle
@@ -215,7 +203,7 @@ static struct imgsensor_info_struct imgsensor_info = {
 	.ihdr_le_firstline = 0,   //1,le first ; 0, se first
 	.temperature_support = 0, //1, support; 0,not support
 
-	.sensor_mode_num = 11,	  //support sensor mode num ,don't support Slow motion
+	.sensor_mode_num = 10,	  //support sensor mode num ,don't support Slow motion
 
 	.cap_delay_frame = 3,		//enter capture delay frame num
 	.pre_delay_frame = 3, 		//enter preview delay frame num
@@ -227,7 +215,6 @@ static struct imgsensor_info_struct imgsensor_info = {
 	.custom3_delay_frame = 3,	//enter custom3 delay frame num
 	.custom4_delay_frame = 3,	//enter custom4 delay frame num
 	.custom5_delay_frame = 3,	//enter custom5 delay frame num
-	.custom6_delay_frame = 3,	//enter custom6 delay frame num
 
 	.isp_driving_current = ISP_DRIVING_6MA, //mclk driving current
 	.sensor_interface_type = SENSOR_INTERFACE_TYPE_MIPI,//sensor_interface_type
@@ -258,7 +245,7 @@ static struct imgsensor_struct imgsensor = {
 };
 
 /* Sensor output window information*/
-static struct SENSOR_WINSIZE_INFO_STRUCT imgsensor_winsize_info[11] = {
+static struct SENSOR_WINSIZE_INFO_STRUCT imgsensor_winsize_info[10] = {
 	{ 12000, 9000,    0,     0,  12000, 9000,  4000, 3000,    0,    0,  4000, 3000,    0,    0,  4000, 3000}, // Preview
 	{ 12000, 9000,    0,     0,  12000, 9000,  4000, 3000,    0,    0,  4000, 3000,    0,    0,  4000, 3000}, // capture
 	{ 12000, 9000,    0,   374,  12000, 6756,  4000, 2252,    0,    0,  4000, 2252,    0,    0,  4000, 2252}, // video
@@ -269,7 +256,6 @@ static struct SENSOR_WINSIZE_INFO_STRUCT imgsensor_winsize_info[11] = {
 	{ 12000, 9000,    0,   374,  12000, 6756,  4000, 2252,    0,    0,  4000, 2252,    0,    0,  4000, 2252}, // custom3 as 12M @ 60fps
 	{ 12000, 9000,    0,     0,  12000, 9000, 12000, 9000,    0,    0, 12000, 9000,    0,    0, 12000, 9000}, // custom4 full size capture
 	{ 12000, 9000, 4500,  3374,   3000, 2252,  3000, 2252,    0,    0,  3000, 2252,    0,    0,  3000, 2252}, // custom5 in sensor zoom4x
-	{12000, 9000,    0,     0,  12000, 9000,  4000, 3000,    0,    0,  4000, 3000,    0,    0,  4000, 3000}, // custom6 as 12M @ 60fps
 };
 
 static struct SENSOR_VC_INFO_STRUCT SENSOR_VC_INFO[3] = {
@@ -1011,14 +997,6 @@ static void custom5_setting(void)
 			sizeof(s5khm2sp_sunny_custom5_setting) / sizeof(kal_uint16));
 }
 
-static void custom6_setting(void)
-{
-	S5KHM2SP_SUNNY_LOG_DBG("E\n");
-	//custom3_setting();
-	table_write_cmos_sensor(s5khm2sp_sunny_custom6_setting,
-			sizeof(s5khm2sp_sunny_custom6_setting) / sizeof(kal_uint16));
-}
-
 static kal_uint16 get_vendor_id(void)
 {
 	kal_uint16 get_byte = 0;
@@ -1394,6 +1372,14 @@ static kal_uint32 custom3(
 	/* imgsensor.current_fps = 600; */
 	imgsensor.autoflicker_en = KAL_FALSE;
 	spin_unlock(&imgsensor_drv_lock);
+
+
+	if (imgsensor.is_writen_otp_done == KAL_FALSE) {
+		write_xtalk_data_to_sensor();
+		imgsensor.is_writen_otp_done = KAL_TRUE;
+	}
+	mdelay(2);
+
 	custom3_setting();
 
 	return ERROR_NONE;
@@ -1414,17 +1400,13 @@ static kal_uint32 custom4(
 	imgsensor.min_frame_length = imgsensor_info.custom4.framelength;
 	imgsensor.dummy_line = 0;
 	imgsensor.dummy_pixel = 0;
-	/* imgsensor.current_fps = 150; */
+	imgsensor.current_fps = 150;
 	imgsensor.autoflicker_en = KAL_FALSE;
 	spin_unlock(&imgsensor_drv_lock);
 
-	if (imgsensor.is_writen_otp_done == KAL_FALSE) {
-		write_xtalk_data_to_sensor();
-		imgsensor.is_writen_otp_done = KAL_TRUE;
-	}
-	mdelay(2);
-
 	custom4_setting();
+
+	mdelay(10);
 
 	return ERROR_NONE;
 }	/*      custom4       */
@@ -1448,39 +1430,10 @@ static kal_uint32 custom5(
 	imgsensor.autoflicker_en = KAL_FALSE;
 	spin_unlock(&imgsensor_drv_lock);
 
-	if (imgsensor.is_writen_otp_done == KAL_FALSE) {
-		write_xtalk_data_to_sensor();
-		imgsensor.is_writen_otp_done = KAL_TRUE;
-	}
-
 	custom5_setting();
 
 	return ERROR_NONE;
 }	/*      custom5       */
-
-static kal_uint32 custom6(
-	MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
-	MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
-{
-	S5KHM2SP_SUNNY_LOG_DBG("loading custom6_setting\n");
-
-	spin_lock(&imgsensor_drv_lock);
-	imgsensor.sensor_mode = IMGSENSOR_MODE_CUSTOM6;
-	imgsensor.pclk = imgsensor_info.custom6.pclk;
-	/* imgsensor.video_mode = KAL_TRUE; */
-	imgsensor.line_length = imgsensor_info.custom6.linelength;
-	imgsensor.frame_length = imgsensor_info.custom6.framelength;
-	imgsensor.min_frame_length = imgsensor_info.custom6.framelength;
-	imgsensor.dummy_line = 0;
-	imgsensor.dummy_pixel = 0;
-	/* imgsensor.current_fps = 150; */
-	imgsensor.autoflicker_en = KAL_FALSE;
-	spin_unlock(&imgsensor_drv_lock);
-
-	custom6_setting();
-
-	return ERROR_NONE;
-}	/*      custom6       */
 
 static kal_uint32 get_resolution(MSDK_SENSOR_RESOLUTION_INFO_STRUCT *sensor_resolution)
 {
@@ -1514,9 +1467,6 @@ static kal_uint32 get_resolution(MSDK_SENSOR_RESOLUTION_INFO_STRUCT *sensor_reso
 
 	sensor_resolution->SensorCustom5Width = imgsensor_info.custom5.grabwindow_width;
 	sensor_resolution->SensorCustom5Height = imgsensor_info.custom5.grabwindow_height;
-
-	sensor_resolution->SensorCustom6Width = imgsensor_info.custom6.grabwindow_width;
-	sensor_resolution->SensorCustom6Height = imgsensor_info.custom6.grabwindow_height;
 
 	return ERROR_NONE;
 }	/*	get_resolution	*/
@@ -1554,7 +1504,6 @@ static kal_uint32 get_info(enum MSDK_SCENARIO_ID_ENUM scenario_id,
 	sensor_info->Custom3DelayFrame = imgsensor_info.custom3_delay_frame;
 	sensor_info->Custom4DelayFrame = imgsensor_info.custom4_delay_frame;
 	sensor_info->Custom5DelayFrame = imgsensor_info.custom5_delay_frame;
-	sensor_info->Custom6DelayFrame = imgsensor_info.custom6_delay_frame;
 
 	sensor_info->SensorMasterClockSwitch = 0; /* not use */
 	sensor_info->SensorDrivingCurrent = imgsensor_info.isp_driving_current;
@@ -1657,13 +1606,6 @@ static kal_uint32 get_info(enum MSDK_SCENARIO_ID_ENUM scenario_id,
 		sensor_info->MIPIDataLowPwr2HighSpeedSettleDelayCount = imgsensor_info.custom5.mipi_data_lp2hs_settle_dc;
 
 		break;
-	case MSDK_SCENARIO_ID_CUSTOM6:
-		sensor_info->SensorGrabStartX = imgsensor_info.custom6.startx;
-		sensor_info->SensorGrabStartY = imgsensor_info.custom6.starty;
-
-		sensor_info->MIPIDataLowPwr2HighSpeedSettleDelayCount = imgsensor_info.custom6.mipi_data_lp2hs_settle_dc;
-
-		break;
 	default:
 		sensor_info->SensorGrabStartX = imgsensor_info.pre.startx;
 		sensor_info->SensorGrabStartY = imgsensor_info.pre.starty;
@@ -1712,9 +1654,6 @@ static kal_uint32 control(enum MSDK_SCENARIO_ID_ENUM scenario_id, MSDK_SENSOR_EX
 		break;
 	case MSDK_SCENARIO_ID_CUSTOM5:
 		custom5(image_window, sensor_config_data);
-		break;
-	case MSDK_SCENARIO_ID_CUSTOM6:
-		custom6(image_window, sensor_config_data);
 		break;
 	default:
 		S5KHM2SP_SUNNY_LOG_DBG("Error ScenarioId setting");
@@ -1913,21 +1852,6 @@ static kal_uint32 set_max_framerate_by_scenario(enum MSDK_SCENARIO_ID_ENUM scena
 			S5KHM2SP_SUNNY_LOG_DBG("frame_length %d < shutter %d", imgsensor.frame_length, imgsensor.shutter);
 		}
 		break;
-	case MSDK_SCENARIO_ID_CUSTOM6:
-		frame_length = imgsensor_info.custom6.pclk / framerate * 10 / imgsensor_info.custom6.linelength;
-		spin_lock(&imgsensor_drv_lock);
-		imgsensor.dummy_line = (frame_length > imgsensor_info.custom6.framelength) ? (frame_length - imgsensor_info.custom6.framelength) : 0;
-		imgsensor.frame_length = imgsensor_info.custom6.framelength + imgsensor.dummy_line;
-		imgsensor.min_frame_length = imgsensor.frame_length;
-		spin_unlock(&imgsensor_drv_lock);
-		if (imgsensor.frame_length > imgsensor.shutter) {
-			set_dummy();
-		} else {
-			/*No need to set*/
-			S5KHM2SP_SUNNY_LOG_DBG("frame_length %d < shutter %d", imgsensor.frame_length, imgsensor.shutter);
-		}
-		break;
-
 	default:  //coding with  preview scenario by default
 		frame_length = imgsensor_info.pre.pclk / framerate * 10 / imgsensor_info.pre.linelength;
 		spin_lock(&imgsensor_drv_lock);
@@ -1981,9 +1905,6 @@ static kal_uint32 get_default_framerate_by_scenario(enum MSDK_SCENARIO_ID_ENUM s
 		break;
 	case MSDK_SCENARIO_ID_CUSTOM5:
 		*framerate = imgsensor_info.custom5.max_framerate;
-		break;
-	case MSDK_SCENARIO_ID_CUSTOM6:
-		*framerate = imgsensor_info.custom6.max_framerate;
 		break;
 	default:
 		break;
@@ -2099,11 +2020,6 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 			= (imgsensor_info.custom5.framelength << 16)
 				+ imgsensor_info.custom5.linelength;
 			break;
-		case MSDK_SCENARIO_ID_CUSTOM6:
-			*(MUINT32 *)(uintptr_t)(*(feature_data + 1))
-			= (imgsensor_info.custom6.framelength << 16)
-				+ imgsensor_info.custom6.linelength;
-			break;
 		case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
 		default:
 			*(MUINT32 *)(uintptr_t)(*(feature_data + 1))
@@ -2150,10 +2066,6 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 		case MSDK_SCENARIO_ID_CUSTOM5:
 			*(MUINT32 *)(uintptr_t)(*(feature_data + 1))
 			= imgsensor_info.custom5.pclk;
-			break;
-		case MSDK_SCENARIO_ID_CUSTOM6:
-			*(MUINT32 *)(uintptr_t)(*(feature_data + 1))
-			= imgsensor_info.custom6.pclk;
 			break;
 		case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
 		default:
@@ -2263,9 +2175,6 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 			break;
 		case MSDK_SCENARIO_ID_CUSTOM5:
 			memcpy((void *)wininfo, (void *)&imgsensor_winsize_info[9], sizeof(struct SENSOR_WINSIZE_INFO_STRUCT));
-			break;
-		case MSDK_SCENARIO_ID_CUSTOM6:
-			memcpy((void *)wininfo, (void *)&imgsensor_winsize_info[10], sizeof(struct SENSOR_WINSIZE_INFO_STRUCT));
 			break;
 		case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
 		default:
@@ -2382,14 +2291,6 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 			imgsensor_info.custom5.grabwindow_width;
 
 			break;
-		case MSDK_SCENARIO_ID_CUSTOM6:
-			*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) =
-			(imgsensor_info.custom6.pclk /
-			(imgsensor_info.custom6.linelength - 80))*
-			imgsensor_info.custom6.grabwindow_width;
-
-			break;
-
 		case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
 		default:
 			*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) =
@@ -2445,11 +2346,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 			*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) =
 				imgsensor_info.custom5.mipi_pixel_rate;
 			break;
-		case MSDK_SCENARIO_ID_CUSTOM6:
-			*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) =
-				imgsensor_info.custom6.mipi_pixel_rate;
-			break;
-		case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
+                case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
 		default:
 			*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) =
 				imgsensor_info.pre.mipi_pixel_rate;
@@ -2536,9 +2433,6 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 			break;
 		case MSDK_SCENARIO_ID_CUSTOM5:
 			*(MUINT32 *)(uintptr_t)(*(feature_data+1)) = 1;
-			break;
-		case MSDK_SCENARIO_ID_CUSTOM6:
-			*(MUINT32 *)(uintptr_t)(*(feature_data+1)) = 0;
 			break;
 		default:
 			*(MUINT32 *)(uintptr_t)(*(feature_data+1)) = 0;

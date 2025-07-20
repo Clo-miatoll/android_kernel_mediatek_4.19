@@ -42,6 +42,23 @@ struct IMGSENSOR_HW_POWER_SEQ sensor_power_sequence[] = {
 		},
 	},
 #endif
+
+#if defined(S5KHM2SP_MAIN_SUNNY_MIPI_RAW)
+        {
+                SENSOR_DRVNAME_S5KHM2SP_MAIN_SUNNY_MIPI_RAW,
+                {
+                        {RST, Vol_Low, 0},
+                        {PDN, Vol_Low, 1},
+                        {PDN, Vol_High, 2},
+                        {DVDD, Vol_1100, 0},
+                        {AVDD, Vol_2800, 0},
+                        {DOVDD, Vol_1800, 2},
+                        {RST, Vol_High, 2},
+                        {SensorMCLK, Vol_High, 10},
+                },
+        },
+#endif
+
 #if defined(OV64B40_MAIN_SUNNY_MIPI_RAW)
 	{
 		SENSOR_DRVNAME_OV64B40_MAIN_SUNNY_MIPI_RAW,
