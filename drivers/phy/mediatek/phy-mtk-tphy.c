@@ -1356,10 +1356,14 @@ static void u2_phy_instance_power_on(struct mtk_tphy *tphy,
 	if (instance->eye_disc)
 		tmp |= PA6_RG_U2_DISCTH_VAL(instance->eye_disc);
 	else
-		tmp |= PA6_RG_U2_DISCTH_VAL(0xf);
+		tmp |= PA6_RG_U2_DISCTH_VAL(0xa);
 	writel(tmp, com + U3P_USBPHYACR6);
 #endif
 	dev_info(tphy->dev, "%s(%d)\n", __func__, index);
+	tmp = readl(com + 0x08);
+	tmp |= 0x1<<3;
+	writel(tmp, u2_banks->com + 0x08);
+	dev_info(tphy->dev, "%s, 0x08 = (0x%0x)\n", __func__,  readl(com + 0x08));
 }
 
 static void u2_phy_instance_power_off(struct mtk_tphy *tphy,
@@ -1581,6 +1585,7 @@ static void u2_phy_instance_set_mode(struct mtk_tphy *tphy,
 		return;
 	case PHY_MODE_USB_DEVICE:
 		tmp |= P2C_FORCE_IDDIG | P2C_RG_IDDIG;
+#if 0
 		device_property_read_u32(dev, "mediatek,eye-src",
 				 &instance->eye_src);
 		device_property_read_u32(dev, "mediatek,eye-vrt",
@@ -1599,6 +1604,10 @@ static void u2_phy_instance_set_mode(struct mtk_tphy *tphy,
 				 &instance->eq_leq_shift);
 		device_property_read_u32(dev, "mediatek,rev4",
 				 &instance->rev4);
+#endif
+		instance->eye_vrt = 7;
+		instance->eye_term = 6;
+		instance->eye_rev6 = 3;
 		u2_phy_props_set(tphy, instance);
 		break;
 	case PHY_MODE_USB_HOST:
@@ -1609,6 +1618,7 @@ static void u2_phy_instance_set_mode(struct mtk_tphy *tphy,
 		tmp |= P2C_RG_VBUSVALID | P2C_RG_BVALID | P2C_RG_AVALID;
 		tmp &= ~P2C_RG_SESSEND;
 #endif
+#if 0
 		device_property_read_u32(dev, "mediatek,host-eye-src",
 				 &instance->eye_src);
 		device_property_read_u32(dev, "mediatek,host-eye-vrt",
@@ -1627,6 +1637,10 @@ static void u2_phy_instance_set_mode(struct mtk_tphy *tphy,
 				 &instance->eq_leq_shift);
 		device_property_read_u32(dev, "mediatek,rev4",
 				 &instance->rev4);
+#endif
+		instance->eye_vrt = 4;
+		instance->eye_term = 4;
+		instance->eye_rev6 = 1;
 		u2_phy_props_set(tphy, instance);
 		break;
 	case PHY_MODE_USB_OTG:
