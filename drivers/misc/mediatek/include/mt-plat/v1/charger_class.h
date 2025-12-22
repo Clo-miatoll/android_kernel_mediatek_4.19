@@ -169,9 +169,10 @@ struct charger_ops {
 	int (*enable_hz)(struct charger_device *dev, bool en);
 
 	int (*enable_bleed_discharge)(struct charger_device *dev, bool en);
-
 	/* misc */
 	int (*get_ext_chgtyp)(struct charger_device *);
+	/* vendor info */
+	int (*get_vendor_id)(struct charger_device *dev, u32 *vendor_id);
 };
 
 static inline void *charger_dev_get_drvdata(
