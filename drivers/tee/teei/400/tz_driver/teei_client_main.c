@@ -186,7 +186,6 @@ static void *teei_cpu_write_owner;
 
 int teei_set_switch_pri(unsigned long policy)
 {
-#ifdef DYNAMIC_SET_PRIORITY
 	struct sched_param param = {.sched_priority = 50 };
 	int retVal = 0;
 
@@ -212,9 +211,6 @@ int teei_set_switch_pri(unsigned long policy)
 	}
 
 	return retVal;
-#else
-	return 0;
-#endif
 }
 
 void teei_cpus_read_lock(void)
@@ -231,18 +227,14 @@ void teei_cpus_read_unlock(void)
 
 void teei_cpus_write_lock(void)
 {
-#ifdef ISEE_FP_SINGLE_CHANNEL
 	cpus_write_lock();
 	teei_cpu_write_owner = current;
-#endif
 }
 
 void teei_cpus_write_unlock(void)
 {
-#ifdef ISEE_FP_SINGLE_CHANNEL
 	teei_cpu_write_owner = NULL;
 	cpus_write_unlock();
-#endif
 }
 
 struct tz_driver_state *get_tz_drv_state(void)
@@ -686,13 +678,13 @@ static long teei_config_ioctl(struct file *file,
 
 			TEEI_BOOT_FOOTPRINT("TEEI start to load driver TAs");
 
+			teei_ta_flags = param.flag;
 			if (param.uuid_count > MAX_DRV_UUIDS) {
 				IMSG_ERROR("TEEI uuid_count is invalid(%u)!\n",
 					(unsigned int)(param.uuid_count));
 				return -EINVAL;
 			}
 
-			teei_ta_flags = param.flag;
 			for (i = 0; i < param.uuid_count; i++) {
 				if ((teei_ta_flags >> i) & (0x01))
 					tz_load_ta_by_str(param.uuids[i]);

@@ -132,15 +132,11 @@ static long fp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 		}
 
-#ifdef DYNAMIC_SET_PRIORITY
 		teei_cpus_write_lock();
-#endif
 
 		ret  = send_fp_command((void *)arg, args_len + 16);
 
-#ifdef DYNAMIC_SET_PRIORITY
 		teei_cpus_write_unlock();
-#endif
 
 		if (ret) {
 			IMSG_ERROR("transfer data to ta failed.\n");
@@ -157,11 +153,8 @@ static long fp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 	case CMD_TEEI_SET_PRI:
 		ret = teei_set_switch_pri(arg);
-		if (ret != 0) {
+		if (ret != 0)
 			IMSG_ERROR("Failed to teei_set_switch_pri %d\n", ret);
-			up(&fp_api_lock);
-			return ret;
-		}
 		break;
 	default:
 		up(&fp_api_lock);
