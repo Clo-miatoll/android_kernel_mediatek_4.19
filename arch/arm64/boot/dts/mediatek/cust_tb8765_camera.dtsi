@@ -1,7 +1,8 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2019 MediaTek Inc.
-*/
+ *
+ */
 /* CAMERA GPIO standardization */
 &pio {
 	camera_pins_cam0_rst0: cam0@0 {
@@ -102,7 +103,7 @@
 	pinctrl-names = "default",
 			"cam0_rst0", "cam0_rst1", "cam0_pnd0", "cam0_pnd1",
 			"cam1_rst0", "cam1_rst1", "cam1_pnd0", "cam1_pnd1",
-			"cam1_ldo_vcamd_0", "cam1_ldo_vcamd_1",
+			"cam_ldo_sub_vcamd_0", "cam_ldo_sub_vcamd_1",
 			"cam0_mclk_on", "cam0_mclk_off",
 			"cam1_mclk_on", "cam1_mclk_off";
 
@@ -133,12 +134,3 @@
 
 };
 /* CAMERA GPIO end */
-
-/* CAMERA AF */
-&camera_af_hw_node {
-	camaf_m1_pmic-supply = <&mt_pmic_vldo28_ldo_reg>;
-	camaf_m2_pmic-supply = <&mt_pmic_vldo28_ldo_reg>;
-	camaf_m3_pmic-supply = <&mt_pmic_vldo28_ldo_reg>;
-	status = "okay";
-};
-/* CAMERA AF end */
