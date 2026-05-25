@@ -542,10 +542,8 @@ static void ufs_mtk_parse_dt(struct ufs_mtk_host *host)
 			 __func__);
 	}
 
-	if (of_property_read_bool(dev->of_node, "mediatek,ufs-qos")) {
-		host->qos_allowed = true;
-		host->qos_enabled = true;
-	}
+	host->qos_allowed = true;
+	host->qos_enabled = true;
 
 	if (of_property_read_bool(dev->of_node, "mediatek,ufs-bkops"))
 		hba->caps |= UFSHCD_CAP_AUTO_BKOPS_SUSPEND;
