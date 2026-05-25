@@ -6251,9 +6251,6 @@ find_idlest_group_cpu(struct sched_group *group, struct task_struct *p, int this
 		if (available_idle_cpu(i)) {
 			struct rq *rq = cpu_rq(i);
 			struct cpuidle_state *idle = idle_get_state(rq);
-
-			if (cpu_isolated(i))
-				continue;
 			if (idle && idle->exit_latency < min_exit_latency) {
 				/*
 				 * We give priority to a CPU whose idle state
@@ -6601,7 +6598,7 @@ int find_best_idle_cpu(struct task_struct *p, bool prefer_idle)
 		for_each_cpu(i, &domain->possible_cpus) {
 
 			/* tsk with prefer idle to find bigger idle cpu */
-			if (!cpu_online(i) || cpu_isolated(i) ||
+			if (!cpu_online(i) || 
 					!cpumask_test_cpu(i, tsk_cpus_allow))
 				continue;
 
@@ -6673,7 +6670,7 @@ int select_max_spare_capacity(struct task_struct *p, int target)
 	/* If the prevous cpu is cache affine and idle, choose it first. */
 	if (cpu != target &&
 		cpus_share_cache(cpu, target) &&
-		idle_cpu(cpu) && !cpu_isolated(cpu))
+		idle_cpu(cpu))
 		return cpu;
 
 	arch_get_cluster_cpus(&cls_cpus, cid);
@@ -6684,9 +6681,6 @@ int select_max_spare_capacity(struct task_struct *p, int target)
 		unsigned long spare_cap;
 
 		if (!cpu_online(cpu))
-			continue;
-
-		if (cpu_isolated(cpu))
 			continue;
 
 #ifdef CONFIG_MTK_SCHED_INTEROP
@@ -6945,9 +6939,6 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 			int idle_idx = INT_MAX;
 
 			if (!cpu_online(i))
-				continue;
-
-			if (cpu_isolated(i))
 				continue;
 
 #ifdef CONFIG_MTK_SCHED_INTEROP
@@ -7434,8 +7425,6 @@ static void select_cpu_candidates(struct sched_domain *sd, cpumask_t *cpus,
 		for_each_cpu_and(cpu, perf_domain_span(pd), sched_domain_span(sd)) {
 			if (!cpumask_test_cpu(cpu, &p->cpus_allowed))
 				continue;
-			if (cpu_isolated(cpu))
-				continue;
 #ifdef CONFIG_MTK_SCHED_INTEROP
 			if (cpu_rq(cpu)->rt.rt_nr_running &&
 				likely(!is_rt_throttle(cpu)))
@@ -7574,8 +7563,7 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu, int sy
 
 	if (sysctl_sched_sync_hint_enable && sync) {
 		cpu = smp_processor_id();
-		if (cpumask_test_cpu(cpu, &p->cpus_allowed) &&
-			!cpu_isolated(cpu))
+		if (cpumask_test_cpu(cpu, &p->cpus_allowed))
 			return cpu;
 	}
 
@@ -7614,13 +7602,11 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu, int sy
 
 	/* If there is only one sensible candidate, select it now. */
 	cpu = cpumask_first(candidates);
-	if (!cpu_isolated(cpu))
-		if (weight == 1 && ((schedtune_prefer_idle(p)
-				&& idle_cpu(cpu)) ||
-				(cpu == prev_cpu))) {
-			best_energy_cpu = cpu;
-			goto unlock;
-		}
+	if (weight == 1 && ((schedtune_prefer_idle(p) && idle_cpu(cpu)) ||
+			    (cpu == prev_cpu))) {
+		best_energy_cpu = cpu;
+		goto unlock;
+	}
 
 	best_energy_cpu = prev_cpu;
 	if (cpumask_test_cpu(prev_cpu, &p->cpus_allowed))
@@ -7631,9 +7617,6 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu, int sy
 	/* Select the best candidate energy-wise. */
 	for_each_cpu(cpu, candidates) {
 		if (cpu == prev_cpu)
-			continue;
-
-		if (cpu_isolated(cpu))
 			continue;
 
 		cur_energy = compute_energy(p, cpu, pd);
@@ -9170,10 +9153,6 @@ void update_group_capacity(struct sched_domain *sd, int cpu)
 		for_each_cpu(cpu, sched_group_span(sdg)) {
 			struct sched_group_capacity *sgc;
 			struct rq *rq = cpu_rq(cpu);
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-			if (cpumask_test_cpu(cpu, cpu_isolated_mask))
-				continue;
-#endif
 
 			/*
 			 * build_sched_domains() -> init_sched_groups_capacity()
@@ -9205,12 +9184,8 @@ void update_group_capacity(struct sched_domain *sd, int cpu)
 		group = child->groups;
 		do {
 			struct sched_group_capacity *sgc = group->sgc;
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-			cpumask_t *cpus = sched_group_cpus(group);
-			/* Revisit this later. This won't work for MT domain */
-			if (!cpu_isolated(cpumask_first(cpus)))
-#endif
-				capacity += sgc->capacity;
+
+			capacity += sgc->capacity;
 			min_capacity = min(sgc->min_capacity, min_capacity);
 			max_capacity = max(sgc->max_capacity, max_capacity);
 			group = group->next;
@@ -9395,8 +9370,7 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 
 	for_each_cpu_and(i, sched_group_span(group), env->cpus) {
 		struct rq *rq = cpu_rq(i);
-		if (cpu_isolated(i))
-			continue;
+
 		if ((env->flags & LBF_NOHZ_STATS) && update_nohz_stats(rq, false))
 			env->flags |= LBF_NOHZ_AGAIN;
 
@@ -9439,25 +9413,8 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 	}
 
 	/* Adjust by relative CPU capacity of the group */
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-		/* Isolated CPU has no weight */
-	if (!group->group_weight) {
-		sgs->group_capacity = 0;
-		sgs->avg_load = 0;
-		sgs->group_no_capacity = 1;
-		sgs->group_type = group_other;
-		sgs->group_weight = group->group_weight;
-	} else {
-#endif
-		sgs->group_capacity = group->sgc->capacity;
-		sgs->avg_load = (sgs->group_load*SCHED_CAPACITY_SCALE) /
-				sgs->group_capacity;
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-		sgs->group_weight = group->group_weight;
-		sgs->group_no_capacity = group_is_overloaded(env, sgs);
-		sgs->group_type = group_classify(group, sgs);
-	}
-#endif
+	sgs->group_capacity = group->sgc->capacity;
+	sgs->avg_load = (sgs->group_load*SCHED_CAPACITY_SCALE) / sgs->group_capacity;
 
 	if (sgs->sum_nr_running)
 		sgs->load_per_task = sgs->sum_weighted_load / sgs->sum_nr_running;
@@ -10195,17 +10152,6 @@ static int active_load_balance_cpu_stop(void *data);
 int active_load_balance_cpu_stop(void *data);
 #endif
 
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-static int group_balance_cpu_not_isolated(struct sched_group *sg)
-{
-	cpumask_t cpus;
-
-	cpumask_and(&cpus, sched_group_cpus(sg), sched_group_mask(sg));
-	cpumask_andnot(&cpus, &cpus, cpu_isolated_mask);
-	return cpumask_first(&cpus);
-}
-#endif
-
 static int should_we_balance(struct lb_env *env)
 {
 	struct sched_group *sg = env->sd->groups;
@@ -10230,19 +10176,12 @@ static int should_we_balance(struct lb_env *env)
 		if (!idle_cpu(cpu))
 			continue;
 
-		if (!cpu_isolated(cpu))
-			continue;
-
 		balance_cpu = cpu;
 		break;
 	}
 
 	if (balance_cpu == -1)
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-		balance_cpu = group_balance_cpu_not_isolated(sg);
-#else
 		balance_cpu = group_balance_cpu(sg);
-#endif
 
 	/*
 	 * First idle CPU or the first CPU(busiest) in this sched group
@@ -10460,8 +10399,7 @@ more_balance:
 			 * ->active_balance_work.  Once set, it's cleared
 			 * only after active load balance is finished.
 			 */
-			if (!busiest->active_balance &&
-				!cpu_isolated(cpu_of(busiest))) {
+			if (!busiest->active_balance) {
 				busiest->active_balance = 1;
 				busiest->push_cpu = this_cpu;
 				active_balance = 1;
@@ -10596,11 +10534,7 @@ int active_load_balance_cpu_stop(void *data)
 	 */
 	if (!cpu_active(busiest_cpu) || !cpu_active(target_cpu))
 		goto out_unlock;
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-	if (!cpu_online(busiest_cpu) || !cpu_online(target_cpu) ||
-		cpu_isolated(busiest_cpu) || cpu_isolated(target_cpu))
-		goto out_unlock;
-#endif
+
 	/* Make sure the requested CPU hasn't gone down in the meantime: */
 	if (unlikely(busiest_cpu != smp_processor_id() ||
 		     !busiest_rq->active_balance))
@@ -10675,16 +10609,7 @@ static DEFINE_SPINLOCK(balancing);
  */
 void update_max_interval(void)
 {
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-	cpumask_t avail_mask;
-	unsigned int available_cpus;
-
-	cpumask_andnot(&avail_mask, cpu_online_mask, cpu_isolated_mask);
-	available_cpus = cpumask_weight(&avail_mask);
-	max_load_balance_interval = HZ*available_cpus/10;
-#else
 	max_load_balance_interval = HZ*num_online_cpus()/10;
-#endif
 }
 
 /*
@@ -10962,16 +10887,6 @@ unlock:
 	rcu_read_unlock();
 }
 
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-void nohz_balance_clear_nohz_mask(int cpu)
-{
-	if (likely(cpumask_test_cpu(cpu, nohz.idle_cpus_mask))) {
-		cpumask_clear_cpu(cpu, nohz.idle_cpus_mask);
-		atomic_dec(&nohz.nr_cpus);
-	}
-}
-#endif
-
 void nohz_balance_exit_idle(struct rq *rq)
 {
 	SCHED_WARN_ON(rq != this_rq());
@@ -10980,12 +10895,8 @@ void nohz_balance_exit_idle(struct rq *rq)
 		return;
 
 	rq->nohz_tick_stopped = 0;
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-	nohz_balance_clear_nohz_mask(cpu_of(rq));
-#else
 	cpumask_clear_cpu(rq->cpu, nohz.idle_cpus_mask);
 	atomic_dec(&nohz.nr_cpus);
-#endif
 
 	set_cpu_sd_state_busy(rq->cpu);
 }
@@ -11018,9 +10929,6 @@ void nohz_balance_enter_idle(int cpu)
 
 	/* If this CPU is going down, then nothing needs to be done: */
 	if (!cpu_active(cpu))
-		return;
-
-	if (cpu_isolated(cpu))
 		return;
 
 	/* Spare idle load balancing on CPUs that don't want to be disturbed: */
@@ -11110,8 +11018,7 @@ static bool _nohz_idle_balance(struct rq *this_rq, unsigned int flags,
 	for_each_cpu(balance_cpu, nohz.idle_cpus_mask) {
 		if (balance_cpu == this_cpu || !idle_cpu(balance_cpu))
 			continue;
-		if (cpu_isolated(balance_cpu))
-			continue;
+
 		/*
 		 * If this CPU gets work to do, stop the load balancing
 		 * work being done for other CPUs. Next load
@@ -11263,8 +11170,6 @@ static int idle_balance(struct rq *this_rq, struct rq_flags *rf)
 	int pulled_task = 0, overload;
 	u64 curr_cost = 0;
 
-	if (cpu_isolated(this_cpu))
-		return 0;
 	/*
 	 * We must set idle_stamp _before_ calling idle_balance(), such that we
 	 * measure the duration of idle_balance() as idle time.
@@ -11415,7 +11320,7 @@ static __latent_entropy void run_rebalance_domains(struct softirq_action *h)
 void trigger_load_balance(struct rq *rq)
 {
 	/* Don't need to rebalance while attached to NULL domain */
-	if (unlikely(on_null_domain(rq)) || cpu_isolated(cpu_of(rq)))
+	if (unlikely(on_null_domain(rq)))
 		return;
 
 	if (time_after_eq(jiffies, rq->next_balance))

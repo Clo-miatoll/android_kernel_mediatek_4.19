@@ -262,8 +262,7 @@ static void pull_rt_task(struct rq *this_rq);
 static inline bool need_pull_rt_task(struct rq *rq, struct task_struct *prev)
 {
 	/* Try to pull RT tasks here if we lower this rq's prio */
-	return rq->rt.highest_prio.curr > prev->prio &&
-		 !cpu_isolated(cpu_of(rq));
+	return rq->rt.highest_prio.curr > prev->prio;
 }
 
 static inline int rt_overloaded(struct rq *rq)
@@ -1447,8 +1446,7 @@ select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags,
 	bool test;
 
 	/* For anything but wake ups, just return the task_cpu */
-	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK
-			&& !cpu_isolated(cpu))
+	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK)
 		goto out;
 
 	rq = cpu_rq(cpu);
@@ -1494,7 +1492,7 @@ select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags,
 	       unlikely(rt_task(curr)) &&
 	       (curr->nr_cpus_allowed < 2 || curr->prio <= p->prio);
 
-	if (test || !rt_task_fits_capacity(p, cpu) || cpu_isolated(cpu)) {
+	if (test || !rt_task_fits_capacity(p, cpu)) {
 #endif
 		int target = find_lowest_rq(p);
 
@@ -1510,8 +1508,7 @@ select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags,
 		 * not running a lower priority task.
 		 */
 		if (target != -1 &&
-		    p->prio < cpu_rq(target)->rt.highest_prio.curr &&
-			!cpu_isolated(target))
+		    p->prio < cpu_rq(target)->rt.highest_prio.curr)
 			cpu = target;
 	}
 
@@ -1763,11 +1760,11 @@ static int find_lowest_rq(struct task_struct *task)
 
 #ifdef CONFIG_MTK_SCHED_INTEROP
 	/* Choose task_cpu if it is idle and it fits lowest_mask */
-	if (cpumask_test_cpu(cpu, lowest_mask) && idle_cpu(cpu) &&
+	if (cpumask_test_cpu(cpu, lowest_mask) &&
 #if defined(CONFIG_ENERGY_MODEL) && defined(CONFIG_CPU_FREQ_GOV_SCHEDUTIL)
 		cpu_is_slowest(cpu) &&
 #endif
-		!cpu_isolated(cpu))
+		idle_cpu(cpu))
 		return cpu;
 
 	if (pod_is_ready()) {
@@ -1778,7 +1775,7 @@ static int find_lowest_rq(struct task_struct *task)
 		for (i = 0; i < domain_cnt; i++) {
 			for_each_cpu(iter_cpu, &tmp_domain[i]->possible_cpus) {
 				if (cpumask_test_cpu(iter_cpu, lowest_mask) &&
-					idle_cpu(iter_cpu) && !cpu_isolated(iter_cpu))
+					idle_cpu(iter_cpu))
 					return iter_cpu;
 			}
 		}
@@ -1813,15 +1810,14 @@ static int find_lowest_rq(struct task_struct *task)
 			 * remote processor.
 			 */
 			if (this_cpu != -1 &&
-			    cpumask_test_cpu(this_cpu, sched_domain_span(sd)) &&
-				!cpu_isolated(this_cpu)) {
+			    cpumask_test_cpu(this_cpu, sched_domain_span(sd))) {
 				rcu_read_unlock();
 				return this_cpu;
 			}
 
 			best_cpu = cpumask_first_and(lowest_mask,
 						     sched_domain_span(sd));
-			if (best_cpu < nr_cpu_ids && !cpu_isolated(best_cpu)) {
+			if (best_cpu < nr_cpu_ids) {
 				rcu_read_unlock();
 				return best_cpu;
 			}
@@ -1834,11 +1830,11 @@ static int find_lowest_rq(struct task_struct *task)
 	 * just give the caller *something* to work with from the compatible
 	 * locations.
 	 */
-	if (this_cpu != -1 && !cpu_isolated(this_cpu))
+	if (this_cpu != -1)
 		return this_cpu;
 
 	cpu = cpumask_any(lowest_mask);
-	if (cpu < nr_cpu_ids && !cpu_isolated(cpu))
+	if (cpu < nr_cpu_ids)
 		return cpu;
 
 	return -1;
@@ -2349,8 +2345,7 @@ static void switched_from_rt(struct rq *rq, struct task_struct *p)
 	 * we may need to handle the pulling of RT tasks
 	 * now.
 	 */
-	if (!task_on_rq_queued(p) || rq->rt.rt_nr_running ||
-		cpu_isolated(cpu_of(rq)))
+	if (!task_on_rq_queued(p) || rq->rt.rt_nr_running)
 		return;
 
 	rt_queue_pull_task(rq);

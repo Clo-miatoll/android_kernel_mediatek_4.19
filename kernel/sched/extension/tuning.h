@@ -12,8 +12,8 @@
 #include <linux/cgroup.h>
 #include <linux/sched.h>
 #include <trace/events/sched.h>
-#include <linux/cpumask.h>
 #include "sched.h"
+
 #ifdef CONFIG_UCLAMP_TASK
 extern struct mutex uclamp_mutex;
 struct task_struct *find_task_by_vpid(pid_t vnr);
