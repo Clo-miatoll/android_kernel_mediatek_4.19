@@ -35,7 +35,7 @@ config MTK_LM_MODE
 	  If you are not sure about this, set n
 
 menu "Storage"
-source "drivers/misc/mediatek/blocktag/Kconfig"
+
 endmenu # Storage
 
 menu "Power, PMIC, Battery & Low Power"
