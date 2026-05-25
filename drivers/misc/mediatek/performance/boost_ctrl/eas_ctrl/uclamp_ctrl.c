@@ -1216,10 +1216,13 @@ PROC_FOPS_RW(perfmgr_log);
 int uclamp_ctrl_init(struct proc_dir_entry *parent)
 {
 #ifdef CONFIG_MTK_SCHED_EXTENSION
-	int i, ret = 0;
+	int ret = 0;
 	size_t idx;
 #if defined(CONFIG_UCLAMP_TASK_GROUP) && defined(CONFIG_SCHED_TUNE)
 	int j;
+#endif
+#if defined(MTK_K14_EAS_BOOST) || (defined(CONFIG_UCLAMP_TASK_GROUP) && defined(CONFIG_SCHED_TUNE))
+	int i;
 #endif
 	struct pentry {
 		const char *name;
