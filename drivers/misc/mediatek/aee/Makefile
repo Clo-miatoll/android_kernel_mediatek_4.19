@@ -35,5 +35,4 @@ subdir-ccflags-y += -I$(srctree)/drivers/gpu/drm/mediatek/
 endif
 
 obj-$(CONFIG_MTK_AEE_FEATURE)	+= aed/
-obj-$(CONFIG_MTK_AEE_FEATURE)	+= mrdump/
 

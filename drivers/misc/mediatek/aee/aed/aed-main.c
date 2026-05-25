@@ -260,7 +260,7 @@ inline struct AE_Msg *msg_create(char **ppmsg, int extra_size)
 static ssize_t msg_copy_to_user(const char *prefix, char *msg, char __user *buf,
 				size_t count, loff_t *f_pos)
 {
-	ssize_t ret = 0;
+	ssize_t ret;
 	int len;
 	char *msg_tmp;
 
