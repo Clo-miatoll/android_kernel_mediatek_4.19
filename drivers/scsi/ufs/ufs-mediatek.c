@@ -542,9 +542,6 @@ static void ufs_mtk_parse_dt(struct ufs_mtk_host *host)
 			 __func__);
 	}
 
-	host->qos_allowed = true;
-	host->qos_enabled = true;
-
 	if (of_property_read_bool(dev->of_node, "mediatek,ufs-bkops"))
 		hba->caps |= UFSHCD_CAP_AUTO_BKOPS_SUSPEND;
 }
@@ -1255,15 +1252,11 @@ static int ufs_mtk_setup_clocks(struct ufs_hba *hba, bool on,
 				phy_power_off(mphy);
 			}
 		}
-		if (host && host->qos_enabled)
-			ufs_mtk_biolog_clk_gating(true);
 	} else if (on && status == POST_CHANGE) {
 		phy_power_on(mphy);
 		ufs_mtk_setup_ref_clk(hba, on);
 		ufs_mtk_pm_qos(hba, on);
 		ufs_mtk_perf_setup(host, true);
-		if (host && host->qos_enabled)
-			ufs_mtk_biolog_clk_gating(false);
 		if(ufs_mtk_has_ufshci_perf_heuristic(hba)) {
 			if (!hba->outstanding_reqs) {
 				hba->ufs_mtk_qcmd_w_cmd_cnt = 0;
@@ -1353,7 +1346,6 @@ static int ufs_mtk_init(struct ufs_hba *hba)
 			   MTK_PM_QOS_MEMORY_BANDWIDTH, 0);
 	host->pm_qos_init = true;
 
-	ufs_mtk_biolog_init(host->qos_allowed);
 
 	ufsdbg_register(hba->dev);
 
@@ -1873,19 +1865,6 @@ static void ufs_mtk_event_notify(struct ufs_hba *hba,
 static void ufs_mtk_setup_xfer_req(struct ufs_hba *hba, int tag,
 				   bool is_scsi_cmd)
 {
-	struct ufshcd_lrb *lrbp;
-	struct scsi_cmnd *cmd;
-
-	if (is_scsi_cmd) {
-		lrbp = &hba->lrb[tag];
-		cmd = lrbp->cmd;
-
-		if (!ufs_mtk_is_data_cmd(cmd, false))
-			return;
-
-		ufs_mtk_biolog_send_command(tag, cmd);
-		ufs_mtk_biolog_check(hba->outstanding_reqs | (1 << tag));
-	}
 	if (!ufs_mtk_has_broken_auto_hibern8(hba))
 		return;
 	ufs_mtk_handle_broken_auto_hibern8(hba, hba->outstanding_reqs, false);
@@ -1895,22 +1874,6 @@ static void ufs_mtk_compl_xfer_req(struct ufs_hba *hba, int tag,
 				   unsigned long completed_reqs,
 				   bool is_scsi_cmd)
 {
-	struct ufshcd_lrb *lrbp;
-	struct scsi_cmnd *cmd;
-	unsigned long req_mask;
-
-	if (is_scsi_cmd) {
-		lrbp = &hba->lrb[tag];
-		cmd = lrbp->cmd;
-
-		if (!ufs_mtk_is_data_cmd(cmd, false))
-			return;
-
-		req_mask = hba->outstanding_reqs &
-			   ~(1 << tag);
-		ufs_mtk_biolog_transfer_req_compl(tag, req_mask);
-		ufs_mtk_biolog_check(req_mask);
-	}
 	if (!ufs_mtk_has_broken_auto_hibern8(hba))
 		return;
 	ufs_mtk_handle_broken_auto_hibern8(hba,
