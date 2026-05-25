@@ -17,7 +17,6 @@
 
 #include <mt-plat/cpu_ctrl.h>
 #include <mt-plat/eas_ctrl.h>
-#include "perf_ioctl.h"
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 

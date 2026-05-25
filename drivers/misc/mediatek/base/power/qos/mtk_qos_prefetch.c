@@ -335,7 +335,7 @@ void qos_prefetch_update_all(void)
 
 	for (i = 0; i < 8; i++) {
 
-		if (!cpu_online(i) || cpu_isolated(i))
+		if (!cpu_online(i))
 			continue;
 
 		cpu_live = qos_prefetch_cpumask & BIT(i);
