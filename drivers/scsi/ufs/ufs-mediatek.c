@@ -40,7 +40,6 @@
 #include "ufs_quirks.h"
 #include "ufs-mediatek.h"
 #include "ufs-mediatek-dbg.h"
-#include "ufs-mtk-block.h"
 #include "unipro.h"
 
 #if defined(CONFIG_MACH_MT6781) || defined(CONFIG_MACH_MT6785)
@@ -2026,7 +2025,6 @@ static int ufs_mtk_remove(struct platform_device *pdev)
 
 	pm_runtime_get_sync(&(pdev)->dev);
 	ufshcd_remove(hba);
-	ufs_mtk_biolog_exit();
 	return 0;
 }
 
