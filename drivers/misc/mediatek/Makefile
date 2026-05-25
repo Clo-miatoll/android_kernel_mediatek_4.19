@@ -119,7 +119,6 @@ obj-$(CONFIG_MTK_PERFORMANCE_MODULE) += performance/
 obj-y += mmdvfs/
 obj-$(CONFIG_MTK_IOMMU_MISC) += iommu/
 obj-$(CONFIG_INTERCONNECT_MTK_MMQOS_COMMON) += mmqos/
-obj-$(CONFIG_MTK_PERF_COMMON) += perf_common/
 ifeq ($(CONFIG_MTK_GAUGE_VERSION),30)
 obj-y += power/
 else

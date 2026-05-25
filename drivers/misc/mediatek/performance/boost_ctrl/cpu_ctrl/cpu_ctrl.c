@@ -12,14 +12,10 @@
 #include <linux/uaccess.h>
 #include <linux/cpufreq.h>
 
-#ifdef CONFIG_MTK_CORE_CTL
-#include <mt-plat/core_ctl.h>
-#endif
 #include <mt-plat/cpu_ctrl.h>
 #include <mt-plat/mtk_ppm_api.h>
 #include "boost_ctrl.h"
 #include "mtk_perfmgr_internal.h"
-#include "topo_ctrl.h"
 
 #ifdef CONFIG_MTK_CPU_CTRL_CFP
 #include "cpu_ctrl_cfp.h"
@@ -204,54 +200,6 @@ ret_update:
 	return 0;
 }
 EXPORT_SYMBOL(update_userlimit_cpu_freq);
-
-#ifdef CONFIG_MTK_CORE_CTL
-int update_cpu_core_limit(int kicker, int cid, int min, int max)
-{
-	int i, final_min, final_max;
-
-	if (kicker < 0 || cid < 0) {
-		pr_debug("kicker: %d, cid: %d errro\n", kicker, cid);
-		return -1;
-	}
-
-	perfmgr_trace_count(kicker,
-		"update_cpu_core_limit_%d_%d_%d_%d", kicker, cid, min, max);
-	mutex_lock(&boost_freq);
-
-	core_set[kicker][cid].core_min = min;
-	core_set[kicker][cid].core_max = max;
-
-	final_min = -1;
-	final_max = default_core_set[cid].core_max;
-
-	for (i = 0; i <= CPU_ISO_KIR_FPSGO; i++) {
-		if (core_set[i][cid].core_max >= 0 &&
-			final_min <= core_set[i][cid].core_max &&
-			core_set[i][cid].core_max <= final_max)
-			final_max = core_set[i][cid].core_max;
-		if (final_min < core_set[i][cid].core_min) {
-			if (core_set[i][cid].core_min <= final_max)
-				final_min = core_set[i][cid].core_min;
-			else
-				final_min = (final_max < 0) ?
-					core_set[i][cid].core_min : final_max;
-		}
-	}
-
-	if (final_max < 0)
-		final_max = default_core_set[cid].core_max;
-	if (final_min < 0)
-		final_min = MIN(default_core_set[cid].core_min, final_max);
-	perfmgr_trace_count(kicker,
-		"core_ctl_set_limit_cpus_%d_%d_%d", cid, final_min, final_max);
-	core_ctl_set_limit_cpus(cid, final_min, final_max);
-	mutex_unlock(&boost_freq);
-
-	return 0;
-}
-EXPORT_SYMBOL(update_cpu_core_limit);
-#endif
 
 /***************************************/
 static ssize_t perfmgr_perfserv_freq_proc_write(struct file *filp
@@ -511,38 +459,12 @@ static ssize_t perfmgr_perfserv_iso_cpu_proc_write(struct file *filp,
 	perfserv_isolation_cpu = data;
 	cid = 0;
 
-#ifdef CONFIG_MTK_CORE_CTL
-	isolation_used[CPU_ISO_KIR_PERF_ISO] = (data > 0) ? 1 : 0;
-
-	for_each_perfmgr_clusters(i) {
-		core_set[CPU_ISO_KIR_PERF_ISO][i].core_min = -1;
-		core_set[CPU_ISO_KIR_PERF_ISO][i].core_max =
-			default_core_set[i].core_max;
-	}
-
-	for (i = 0; i < num_cpu; i++) {
-		if ((perfserv_isolation_cpu & (1 << i)) > 0) {
-			core_set[CPU_ISO_KIR_PERF_ISO][cid].core_max--;
-			core_ctl_set_not_preferred(cid, i, 1);
-		} else {
-			core_ctl_set_not_preferred(cid, i, 0);
-		}
-		if (i+1 >= topo_ctrl_get_cluster_cpu_id(cid+1))
-			cid++;
-	}
-
-	for_each_perfmgr_clusters(i)
-		update_cpu_core_limit(CPU_ISO_KIR_PERF_ISO, i,
-			core_set[CPU_ISO_KIR_PERF_ISO][i].core_min,
-			core_set[CPU_ISO_KIR_PERF_ISO][i].core_max);
-#else
 	for (i = 0; i < num_cpu; i++) {
 		if ((perfserv_isolation_cpu & (1 << i)) > 0)
 			update_isolation_cpu(CPU_ISO_KIR_PERF_ISO, 1, i);
 		else
 			update_isolation_cpu(CPU_ISO_KIR_PERF_ISO, -1, i);
 	}
-#endif
 
 	return cnt;
 }
@@ -604,12 +526,6 @@ static ssize_t perfmgr_perfserv_core_proc_write(struct file *filp
 			}
 		}
 		isolation_used[CPU_ISO_KIR_PERF_CORE] = (isDefault) ? 0 : 1;
-#ifdef CONFIG_MTK_CORE_CTL
-		for_each_perfmgr_clusters(i)
-			update_cpu_core_limit(CPU_ISO_KIR_PERF_CORE, i,
-				core_set[CPU_ISO_KIR_PERF_CORE][i].core_min,
-				core_set[CPU_ISO_KIR_PERF_CORE][i].core_max);
-#endif
 	}
 
 
