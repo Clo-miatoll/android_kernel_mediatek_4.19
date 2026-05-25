@@ -84,7 +84,6 @@ obj-$(CONFIG_MTK_SYNC) += sync/
 obj-${CONFIG_MTK_ATF_LOGGER} += atf/
 obj-$(CONFIG_MTK_APUSYS_SUPPORT) += apusys/
 obj-$(CONFIG_MTK_AMMS) += memory-amms/
-obj-$(CONFIG_MTPROF) += mtprof/
 obj-${CONFIG_MTK_ICE_DEBUG} += ice_debug/
 obj-$(CONFIG_MTK_TINYSYS_SSPM_SUPPORT) += sspm/
 obj-$(CONFIG_MTK_SPMTWAM) += twam/
