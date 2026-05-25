@@ -903,7 +903,7 @@ int mmc_run_queue_thread(void *data)
 	u64 chk_time = 0;
 
 	pr_info("[CQ] start cmdq thread\n");
-	mt_bio_queue_alloc(current, NULL, false);
+	mt_bio_queue_alloc(current, NULL);
 
 	while (1) {
 		mt_biolog_cmdq_check();

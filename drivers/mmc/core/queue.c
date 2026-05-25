@@ -284,6 +284,7 @@ static blk_status_t mmc_mq_queue_rq(struct blk_mq_hw_ctx *hctx,
 		break;
 	}
 
+	mt_biolog_mmcqd_req_check();
 	/* Parallel dispatch of requests is not supported at the moment */
 	mq->busy = true;
 

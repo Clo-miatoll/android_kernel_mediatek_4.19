@@ -2491,18 +2491,6 @@ static int mmc_blk_mq_issue_rw_rq(struct mmc_queue *mq,
 	struct request *prev_req = NULL;
 	int err = 0;
 
-	int minor = req->rq_disk ? MINOR(disk_devt(req->rq_disk)) : 0;
-
-	if (minor) {
-		mt_bio_queue_alloc(current, NULL, true);
-		mt_biolog_mmcqd_req_check(true);
-		mt_biolog_mmcqd_req_start(host, true);
-	} else {
-		mt_bio_queue_alloc(current, NULL, false);
-		mt_biolog_mmcqd_req_check(false);
-		mt_biolog_mmcqd_req_start(host, false);
-	}
-
 	mmc_blk_rw_rq_prep(mqrq, mq->card, 0, mq);
 
 	mqrq->brq.mrq.done = mmc_blk_mq_req_done;
@@ -2512,12 +2500,14 @@ static int mmc_blk_mq_issue_rw_rq(struct mmc_queue *mq,
 	err = mmc_blk_rw_wait(mq, &prev_req);
 	if (err)
 		goto out_post_req;
+	mt_biolog_mmcqd_req_end(mqrq->brq.mrq.data);
 
 	mq->rw_wait = true;
 	err = mmc_start_request(host, &mqrq->brq.mrq);
 
 	if (prev_req)
 		mmc_blk_mq_post_req(mq, prev_req);
+	mt_biolog_mmcqd_req_start(host);
 
 	if (err)
 		mq->rw_wait = false;
@@ -2525,13 +2515,6 @@ static int mmc_blk_mq_issue_rw_rq(struct mmc_queue *mq,
 	/* Release re-tuning here where there is no synchronization required */
 	if (err || mmc_host_done_complete(host))
 		mmc_retune_release(host);
-
-	if (!err) {
-		if (minor)
-			mt_biolog_mmcqd_req_end(mqrq->brq.mrq.data, true);
-		else
-			mt_biolog_mmcqd_req_end(mqrq->brq.mrq.data, false);
-	}
 
 out_post_req:
 	if (err)
@@ -2612,9 +2595,7 @@ static int mmc_blk_swcq_issue_rw_rq(struct mmc_queue *mq,
 	} else
 		return -EBUSY;
 
-	mt_bio_queue_alloc(current, NULL, false);
-	mt_biolog_mmcqd_req_check(false);
-	mt_biolog_mmcqd_req_start(host, false);
+	mt_biolog_mmcqd_req_check();
 	mq->mqrq[index].req = req;
 	atomic_set(&mqrq->index, index + 1);
 	atomic_set(&mq->mqrq[index].index, index + 1);
@@ -2635,9 +2616,6 @@ static int mmc_blk_swcq_issue_rw_rq(struct mmc_queue *mq,
 
 	if (err)
 		mmc_post_req(host, &mqrq->brq.mrq, err);
-
-	if (!err)
-		mt_biolog_mmcqd_req_end(mqrq->brq.mrq.data, false);
 
 	return err;
 }

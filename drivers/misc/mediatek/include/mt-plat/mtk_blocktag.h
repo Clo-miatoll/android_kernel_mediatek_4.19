@@ -129,7 +129,6 @@ struct mtk_btag_pidlogger_entry_rw {
 
 struct mtk_btag_pidlogger_entry {
 	__u16 pid;
-	char comm[TASK_COMM_LEN];
 	struct mtk_btag_pidlogger_entry_rw r; /* read */
 	struct mtk_btag_pidlogger_entry_rw w; /* write */
 };
@@ -213,13 +212,12 @@ struct mtk_btag_trace *mtk_btag_curr_trace(struct mtk_btag_ringtrace *rt);
 struct mtk_btag_trace *mtk_btag_next_trace(struct mtk_btag_ringtrace *rt);
 
 int mtk_btag_pidlog_add_mmc(struct request_queue *q, pid_t pid, __u32 len,
-	int rw, bool ext_sd);
+	int rw);
 int mtk_btag_pidlog_add_ufs(struct request_queue *q, pid_t pid, __u32 len,
 	int rw);
 void mtk_btag_pidlog_insert(struct mtk_btag_pidlogger *pidlog, pid_t pid,
 __u32 len, int rw);
-void mtk_mq_btag_pidlog_insert(struct mtk_btag_pidlogger *pidlog, pid_t pid,
-	__u32 len, int write, bool ext_sd);
+
 void mtk_btag_cpu_eval(struct mtk_btag_cpu *cpu);
 void mtk_btag_pidlog_eval(struct mtk_btag_pidlogger *pl,
 	struct mtk_btag_pidlogger *ctx_pl);

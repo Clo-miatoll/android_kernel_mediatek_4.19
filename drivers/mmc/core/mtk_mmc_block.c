@@ -70,7 +70,7 @@ enum {
 #define REQ_MMCQD0_BOOT1 "mmcqd/0boot1"
 #define REQ_MMCQD0_RPMB  "mmcqd/0rpmb"
 #define REQ_MMCCMDQD0 "mmc-cmdqd/0"
-#define REQ_MMCQD1 "kworker"
+#define REQ_MMCQD1 "mmcqd/1"
 
 static void mt_bio_ctx_count_usage(struct mt_bio_context *ctx,
 	__u64 start, __u64 end);
@@ -124,8 +124,7 @@ static void mt_bio_init_task(struct mt_bio_context_task *tsk)
 }
 
 static void mt_bio_init_ctx(struct mt_bio_context *ctx,
-	struct task_struct *thread, struct request_queue *q,
-	bool ext_sd)
+	struct task_struct *thread, struct request_queue *q)
 {
 	int i;
 
@@ -133,12 +132,8 @@ static void mt_bio_init_ctx(struct mt_bio_context *ctx,
 	ctx->pid = task_pid_nr(thread);
 	get_task_comm(ctx->comm, thread);
 	ctx->qid = get_qid_by_name(ctx->comm);
-	if (ext_sd)
-		ctx->qid = BTAG_STORAGE_EXTERNAL;
 	spin_lock_init(&ctx->lock);
 	ctx->id = get_ctxid_by_name(ctx->comm);
-	if (ext_sd)
-		ctx->id = CTX_MMCQD1;
 	if (ctx->id >= 0)
 		mt_ctx_map[ctx->id] = ctx;
 	ctx->period_start_t = sched_clock();
@@ -147,12 +142,10 @@ static void mt_bio_init_ctx(struct mt_bio_context *ctx,
 		mt_bio_init_task(&ctx->task[i]);
 }
 
-void mt_bio_queue_alloc(struct task_struct *thread, struct request_queue *q,
-	bool ext_sd)
+void mt_bio_queue_alloc(struct task_struct *thread, struct request_queue *q)
 {
 	int i;
 	pid_t pid;
-	static bool ext_sd_setup_done;
 	struct mt_bio_context *ctx = BTAG_CTX(mtk_btag_mmc);
 
 	if (!ctx)
@@ -163,18 +156,8 @@ void mt_bio_queue_alloc(struct task_struct *thread, struct request_queue *q,
 	for (i = 0; i < MMC_BIOLOG_CONTEXTS; i++)	{
 		if (ctx[i].pid == pid)
 			break;
-		/* bypass more SD wokers */
-		if (ext_sd_setup_done)
-			break;
-		/* bypass more emmc wokers */
-		if ((i > 1) && !ext_sd)
-			break;
 		if (ctx[i].pid == 0) {
-			if (ext_sd) {
-				ext_sd_setup_done = true;
-				mt_bio_init_ctx(&ctx[i], thread, q, true);
-			} else
-				mt_bio_init_ctx(&ctx[i], thread, q, false);
+			mt_bio_init_ctx(&ctx[i], thread, q);
 			break;
 		}
 	}
@@ -200,8 +183,7 @@ void mt_bio_queue_free(struct task_struct *thread)
 	}
 }
 
-static struct mt_bio_context *mt_bio_curr_queue(struct request_queue *q,
-	bool ext_sd)
+static struct mt_bio_context *mt_bio_curr_queue(struct request_queue *q)
 {
 	int i;
 	pid_t qd_pid;
@@ -215,18 +197,17 @@ static struct mt_bio_context *mt_bio_curr_queue(struct request_queue *q,
 	for (i = 0; i < MMC_BIOLOG_CONTEXTS; i++)	{
 		if (ctx[i].pid == 0)
 			continue;
-		if (!strncmp(ctx[i].comm, REQ_MMCQD0, strlen(REQ_MMCQD0)) ||
-			(qd_pid == ctx[i].pid) || (ctx[i].q && ctx[i].q == q)) {
-			return ext_sd ? &ctx[i+1] : &ctx[i];
-		}
+		if ((qd_pid == ctx[i].pid) || (ctx[i].q && ctx[i].q == q))
+			return &ctx[i];
 	}
+
 	return NULL;
 }
 
 /* get context correspond to current process */
-static inline struct mt_bio_context *mt_bio_curr_ctx(bool ext_sd)
+static inline struct mt_bio_context *mt_bio_curr_ctx(void)
 {
-	return mt_bio_curr_queue(NULL, ext_sd);
+	return mt_bio_curr_queue(NULL);
 }
 
 /* get other queue's context by context id */
@@ -240,17 +221,17 @@ static struct mt_bio_context *mt_bio_get_ctx(int id)
 
 /* append a pidlog to given context */
 int mtk_btag_pidlog_add_mmc(struct request_queue *q, pid_t pid, __u32 len,
-	int write, bool ext_sd)
+	int write)
 {
 	unsigned long flags;
 	struct mt_bio_context *ctx;
 
-	ctx = mt_bio_curr_queue(q, ext_sd);
+	ctx = mt_bio_curr_queue(q);
 	if (!ctx)
 		return 0;
 
 	spin_lock_irqsave(&ctx->lock, flags);
-	mtk_mq_btag_pidlog_insert(&ctx->pidlog, pid, len, write, ext_sd);
+	mtk_btag_pidlog_insert(&ctx->pidlog, pid, len, write);
 
 	if (ctx->qid == BTAG_STORAGE_EMBEDDED)
 		mtk_btag_mictx_eval_req(write, 1, len);
@@ -361,15 +342,13 @@ static struct mt_bio_context_task *mt_bio_get_task(struct mt_bio_context *ctx,
 
 static struct mt_bio_context_task *mt_bio_curr_task_by_ctx_id(
 	unsigned int task_id,
-	struct mt_bio_context **curr_ctx,
-	int mt_ctx_map,
-	bool ext_sd)
+	struct mt_bio_context **curr_ctx, int mt_ctx_map)
 {
 	struct mt_bio_context *ctx;
 
 	if (mt_ctx_map == -1)
 		/* get ctx by current pid */
-		ctx = mt_bio_curr_ctx(ext_sd);
+		ctx = mt_bio_curr_ctx();
 	else
 		/* get ctx by ctx map id */
 		ctx = mt_bio_get_ctx(mt_ctx_map);
@@ -379,10 +358,10 @@ static struct mt_bio_context_task *mt_bio_curr_task_by_ctx_id(
 }
 
 static struct mt_bio_context_task *mt_bio_curr_task(unsigned int task_id,
-	struct mt_bio_context **curr_ctx, bool ext_sd)
+	struct mt_bio_context **curr_ctx)
 {
 	/* get ctx by current pid */
-	return mt_bio_curr_task_by_ctx_id(task_id, curr_ctx, -1, ext_sd);
+	return mt_bio_curr_task_by_ctx_id(task_id, curr_ctx, -1);
 }
 
 static const char *task_name[tsk_max] = {
@@ -414,7 +393,7 @@ void mt_biolog_cmdq_check(void)
 	__u64 end_time, period_time;
 	unsigned long flags;
 
-	ctx = mt_bio_curr_ctx(false);
+	ctx = mt_bio_curr_ctx();
 	if (!ctx)
 		return;
 
@@ -451,7 +430,7 @@ void mt_biolog_cmdq_queue_task(unsigned int task_id, struct mmc_request *req)
 	if (!req->sbc)
 		return;
 
-	tsk = mt_bio_curr_task(task_id, &ctx, false);
+	tsk = mt_bio_curr_task(task_id, &ctx);
 	if (!tsk)
 		return;
 
@@ -553,7 +532,7 @@ void mt_biolog_cmdq_dma_start(unsigned int task_id)
 	struct mt_bio_context_task *tsk;
 	struct mt_bio_context *ctx;
 
-	tsk = mt_bio_curr_task(task_id, &ctx, false);
+	tsk = mt_bio_curr_task(task_id, &ctx);
 	if (!tsk)
 		return;
 	tsk->t[tsk_dma_start] = sched_clock();
@@ -574,7 +553,7 @@ void mt_biolog_cmdq_dma_end(unsigned int task_id)
 	struct mt_bio_context_task *tsk;
 	struct mt_bio_context *ctx;
 
-	tsk = mt_bio_curr_task(task_id, &ctx, false);
+	tsk = mt_bio_curr_task(task_id, &ctx);
 	if (!tsk)
 		return;
 	tsk->t[tsk_dma_end] = sched_clock();
@@ -587,7 +566,7 @@ void mt_biolog_cmdq_isdone_start(unsigned int task_id, struct mmc_request *req)
 {
 	struct mt_bio_context_task *tsk;
 
-	tsk = mt_bio_curr_task(task_id, NULL, false);
+	tsk = mt_bio_curr_task(task_id, NULL);
 	if (!tsk)
 		return;
 	tsk->t[tsk_isdone_start] = sched_clock();
@@ -604,7 +583,7 @@ void mt_biolog_cmdq_isdone_end(unsigned int task_id)
 	struct mt_bio_context_task *tsk;
 	struct mtk_btag_throughput_rw *tp;
 
-	tsk = mt_bio_curr_task(task_id, &ctx, false);
+	tsk = mt_bio_curr_task(task_id, &ctx);
 	if (!tsk)
 		return;
 
@@ -667,7 +646,7 @@ void mt_biolog_cqhci_queue_task(unsigned int task_id, struct mmc_request *req)
 		return;
 
 	tsk = mt_bio_curr_task_by_ctx_id(task_id,
-		&ctx, CTX_MMCCMDQD0, false);
+		&ctx, CTX_MMCCMDQD0);
 	if (!tsk)
 		return;
 
@@ -706,7 +685,7 @@ void mt_biolog_cqhci_complete(unsigned int task_id)
 	unsigned long flags;
 
 	tsk = mt_bio_curr_task_by_ctx_id(task_id,
-		&ctx, CTX_MMCCMDQD0, false);
+		&ctx, CTX_MMCCMDQD0);
 	if (!tsk)
 		return;
 
@@ -746,12 +725,12 @@ void mt_biolog_cqhci_complete(unsigned int task_id)
 }
 
 /* MMC Queue Hook: check function at mmc_blk_issue_rw_rq() */
-void mt_biolog_mmcqd_req_check(bool ext_sd)
+void mt_biolog_mmcqd_req_check(void)
 {
 	struct mt_bio_context *ctx;
 	__u64 end_time, period_time;
 
-	ctx = mt_bio_curr_ctx(ext_sd);
+	ctx = mt_bio_curr_ctx();
 	if (!ctx)
 		return;
 
@@ -779,12 +758,12 @@ void mt_biolog_mmcqd_req_check(bool ext_sd)
 }
 
 /* MMC Queue Hook: request start function at mmc_start_req() */
-void mt_biolog_mmcqd_req_start(struct mmc_host *host, bool ext_sd)
+void mt_biolog_mmcqd_req_start(struct mmc_host *host)
 {
 	struct mt_bio_context *ctx;
 	struct mt_bio_context_task *tsk;
 
-	tsk = mt_bio_curr_task(0, &ctx, ext_sd);
+	tsk = mt_bio_curr_task(0, &ctx);
 	if (!tsk)
 		return;
 	tsk->t[tsk_req_start] = sched_clock();
@@ -807,7 +786,7 @@ void mt_biolog_mmcqd_req_start(struct mmc_host *host, bool ext_sd)
 }
 
 /* MMC Queue Hook: request end function at mmc_start_req() */
-void mt_biolog_mmcqd_req_end(struct mmc_data *data, bool ext_sd)
+void mt_biolog_mmcqd_req_end(struct mmc_data *data)
 {
 	int rw;
 	__u32 size;
@@ -828,7 +807,7 @@ void mt_biolog_mmcqd_req_end(struct mmc_data *data, bool ext_sd)
 	else
 		return;
 
-	tsk = mt_bio_curr_task(0, &ctx, ext_sd);
+	tsk = mt_bio_curr_task(0, &ctx);
 	if (!tsk)
 		return;
 
