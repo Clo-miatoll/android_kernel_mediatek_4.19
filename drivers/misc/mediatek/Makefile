@@ -86,7 +86,6 @@ obj-$(CONFIG_MTK_AMMS) += memory-amms/
 obj-$(CONFIG_MTK_TINYSYS_SSPM_SUPPORT) += sspm/
 obj-$(CONFIG_MTK_SPMTWAM) += twam/
 obj-$(CONFIG_MTK_DVFSRC) += dvfsrc/
-obj-$(CONFIG_MTK_AEE_FEATURE) += aee/
 obj-$(CONFIG_MTK_CLK_BUFFER) += clkbuf/
 obj-$(CONFIG_MTK_QOS_FRAMEWORK) += qos/
 obj-$(CONFIG_MTK_SLBC) += slbc/
