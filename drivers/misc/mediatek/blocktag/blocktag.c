@@ -180,6 +180,7 @@ static void mtk_btag_pidlog_add(struct request_queue *q, struct bio *bio,
 {
 	int write = bio_data_dir(bio);
 	int major = bio->bi_disk ? MAJOR(bio_dev(bio)) : 0;
+	int minor = bio->bi_disk ? MINOR(bio_dev(bio)) : 0;
 
 	if (pid != 0xFFFF && major) {
 #ifdef CONFIG_MTK_UFS_BLOCK_IO_LOG
@@ -189,8 +190,12 @@ static void mtk_btag_pidlog_add(struct request_queue *q, struct bio *bio,
 		}
 #endif
 #ifdef CONFIG_MMC_BLOCK_IO_LOG
-		if (major == MMC_BLOCK_MAJOR) {
-			mtk_btag_pidlog_add_mmc(q, pid, len, write);
+		if (major == MMC_BLOCK_MAJOR && !minor) {
+			mtk_btag_pidlog_add_mmc(q, pid, len, write, false);
+			return;
+		}
+		if (major == MMC_BLOCK_MAJOR && minor) {
+			mtk_btag_pidlog_add_mmc(q, pid, len, write, true);
 			return;
 		}
 #endif
