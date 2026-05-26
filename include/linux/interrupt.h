@@ -19,6 +19,11 @@
 #include <asm/irq.h>
 #include <asm/sections.h>
 
+/* HACK: Keep MediaTek drivers happy */
+#include <linux/sched/clock.h>
+#include <linux/mutex.h>
+#include <mt-plat/aee.h>
+
 /*
  * These correspond to the IORESOURCE_IRQ_* defines in
  * linux/ioport.h to select the interrupt line behaviour.  When
