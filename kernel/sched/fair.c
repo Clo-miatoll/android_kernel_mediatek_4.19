@@ -7771,9 +7771,6 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag,
 
 	result = SELECT_TASK_RQ_FAIR(p, prev_cpu, sd_flag, wake_flags,
 		sibling_count_hint);
-#ifdef CONFIG_MTK_SCHED_CPU_PREFER
-	select_task_prefer_cpu_fair(p, &result);
-#endif
 	cpu = (result & LB_CPU_MASK);
 
 #ifdef CONFIG_MTK_SCHED_EXTENSION
@@ -8592,27 +8589,8 @@ static struct task_struct *detach_one_task(struct lb_env *env)
 
 	list_for_each_entry_reverse(p,
 			&env->src_rq->cfs_tasks, se.group_node) {
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-		int src_cpu = cpu_of(env->src_rq);
-		struct task_struct *pm;
-
-		pm = per_cpu(migrate_task, src_cpu);
-		if (pm) {
-			if (p != pm)
-				continue;
-
-			per_cpu(migrate_task, src_cpu) = NULL;
-
-			if (!cpumask_test_cpu(env->dst_cpu, &p->cpus_allowed))
-				return NULL;
-
-		} else if (!can_migrate_task(p, env)) {
-			continue;
-		}
-#else
 		if (!can_migrate_task(p, env))
 			continue;
-#endif
 
 		detach_task(p, env);
 		/*
@@ -10384,15 +10362,6 @@ more_balance:
 				env.flags |= LBF_ALL_PINNED;
 				goto out_one_pinned;
 			}
-
-#ifdef CONFIG_MTK_SCHED_CPU_PREFER
-			if (task_prefer_fit(busiest->curr, cpu_of(busiest))) {
-				raw_spin_unlock_irqrestore(&busiest->lock,
-							    flags);
-				env.flags |= LBF_ALL_PINNED;
-				goto out_one_pinned;
-			}
-#endif
 
 			/*
 			 * ->active_balance synchronizes accesses to

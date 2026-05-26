@@ -2818,16 +2818,3 @@ void cpuset_task_status_allowed(struct seq_file *m, struct task_struct *task)
 	seq_printf(m, "Mems_allowed_list:\t%*pbl\n",
 		   nodemask_pr_args(&task->mems_allowed));
 }
-
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-int task_cs_cpu_perfer(struct task_struct *task)
-{
-	int cpu_prefer = 0;
-
-	rcu_read_lock();
-	cpu_prefer = task_cs(task)->prefer_cpu;
-	rcu_read_unlock();
-
-	return cpu_prefer;
-}
-#endif

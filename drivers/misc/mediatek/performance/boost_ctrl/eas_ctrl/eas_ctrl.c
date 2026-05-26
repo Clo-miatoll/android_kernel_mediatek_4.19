@@ -60,85 +60,6 @@ static unsigned long policy_mask[NR_CGROUP];
 
 /********************************************************************/
 
-/* Add procfs to control sched_boost */
-/* set_sched_boost_type: eas_ctrl_plat.h */
-static ssize_t perfmgr_sched_boost_proc_write(struct file *filp,
-		const char *ubuf, size_t cnt, loff_t *pos)
-{
-	int data = 0;
-	int rv = check_proc_write(&data, ubuf, cnt);
-
-	if (rv != 0)
-		return rv;
-
-	if (data < 0 || data > 2)
-		return -EINVAL;
-
-#if defined(CONFIG_CGROUPS) && defined(CONFIG_MTK_SCHED_CPU_PREFER)
-	if (set_sched_boost_type(data) < 0)
-		return -EINVAL;
-#endif
-
-	return cnt;
-}
-
-static int perfmgr_sched_boost_proc_show(struct seq_file *m, void *v)
-{
-	int boost_type = 0;
-
-#if defined(CONFIG_CGROUPS) && defined(CONFIG_MTK_SCHED_CPU_PREFER)
-	boost_type = get_sched_boost_type();
-#endif
-
-	seq_printf(m, "sched_boost = %d ", boost_type);
-	if (boost_type == 0)
-		seq_puts(m, "(no boost)\n");
-	else if (boost_type == 1)
-		seq_puts(m, "(all boost)\n");
-	else if (boost_type == 2)
-		seq_puts(m, "(foreground boost)\n");
-	else
-		seq_puts(m, "(invalid setting)\n");
-
-	return 0;
-}
-
-/* Add procfs to control cpu_prefer */
-/* set_sched_boost_type: eas_ctrl_plat.h */
-static ssize_t perfmgr_cpu_prefer_proc_write(struct file *filp,
-		const char *ubuf, size_t cnt, loff_t *pos)
-{
-	char buf[64];
-	pid_t pid, type;
-
-	if (cnt >= sizeof(buf))
-		return -EINVAL;
-
-	if (copy_from_user(buf, ubuf, cnt))
-		return -EFAULT;
-	buf[cnt] = '\0';
-
-	if (sscanf(buf, "%d %d", (int *)&pid, &type) != 2)
-		return -EFAULT;
-
-#ifdef CONFIG_MTK_SCHED_CPU_PREFER
-	if (sched_set_cpuprefer(pid, type) != 0)
-		return -EINVAL;
-#endif
-	last_cpu_prefer_pid = pid;
-	last_cpu_perfer_type = type;
-
-	return cnt;
-}
-
-static int perfmgr_cpu_prefer_proc_show(struct seq_file *m, void *v)
-{
-	seq_printf(m, "last pid:%d, type:%d\n",
-		(int)last_cpu_prefer_pid, last_cpu_perfer_type);
-
-	return 0;
-}
-
 #ifdef MTK_K14_EAS_BOOST
 static void walt_mode(int enable)
 {
@@ -639,8 +560,6 @@ static int perfmgr_debug_ta_boost_proc_show(struct seq_file *m, void *v)
 PROC_FOPS_RW(m_sched_migrate_cost_n);
 PROC_FOPS_RW(sched_stune_task_thresh);
 #endif
-PROC_FOPS_RW(sched_boost);
-PROC_FOPS_RW(cpu_prefer);
 
 #ifdef MTK_K14_EAS_BOOST
 /* boost value */
@@ -684,8 +603,6 @@ int eas_ctrl_init(struct proc_dir_entry *parent)
 		PROC_ENTRY(m_sched_migrate_cost_n),
 		PROC_ENTRY(sched_stune_task_thresh),
 #endif
-		PROC_ENTRY(sched_boost),
-		PROC_ENTRY(cpu_prefer),
 #ifdef MTK_K14_EAS_BOOST
 		PROC_ENTRY(perfserv_prefer_idle),
 		/*--ext_launch--*/
@@ -738,8 +655,6 @@ int eas_ctrl_init(struct proc_dir_entry *parent)
 	perf_sched_stune_task_thresh = -1;
 	debug_fix_boost = 0;
 #endif
-	last_cpu_prefer_pid = (pid_t)0;
-	last_cpu_perfer_type = 0;
 out:
 #endif
 	mutex_init(&boost_eas);

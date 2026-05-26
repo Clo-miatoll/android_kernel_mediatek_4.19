@@ -23,9 +23,6 @@ TRACE_EVENT(sched_select_task_rq,
 		__field(int, boost)
 		__field(long, task_mask)
 		__field(bool, prefer)
-#ifdef CONFIG_MTK_SCHED_CPU_PREFER
-		__field(int, cpu_prefer)
-#endif
 		__field(int, wake_flags)
 		),
 
@@ -38,13 +35,10 @@ TRACE_EVENT(sched_select_task_rq,
 		__entry->boost		= boost;
 		__entry->task_mask	= tsk->cpus_allowed.bits[0];
 		__entry->prefer		= prefer;
-#ifdef CONFIG_MTK_SCHED_CPU_PREFER
-		__entry->cpu_prefer = cpu_prefer(tsk);
-#endif
 		__entry->wake_flags	= wake_flags;
 		),
 
-	TP_printk("pid=%4d policy=0x%08x pre-cpu=%d target=%d util=%d boost=%d mask=0x%lx prefer=%d cpu_prefer=%d flags=%d",
+	TP_printk("pid=%4d policy=0x%08x pre-cpu=%d target=%d util=%d boost=%d mask=0x%lx prefer=%d flags=%d",
 		__entry->pid,
 		__entry->policy,
 		__entry->prev_cpu,
@@ -53,11 +47,6 @@ TRACE_EVENT(sched_select_task_rq,
 		__entry->boost,
 		__entry->task_mask,
 		__entry->prefer,
-#ifdef CONFIG_MTK_SCHED_CPU_PREFER
-		__entry->cpu_prefer,
-#else
-		0,
-#endif
 		__entry->wake_flags)
 
 );
@@ -196,32 +185,4 @@ TRACE_EVENT(sched_migrate,
 		__entry->src, __entry->dest,
 		__entry->force)
 );
-
-#ifdef CONFIG_MTK_SCHED_CPU_PREFER
-/*
- * Tracepoint for set task cpu prefer
- */
-TRACE_EVENT(sched_set_cpuprefer,
-
-	TP_PROTO(struct task_struct *tsk),
-
-	TP_ARGS(tsk),
-
-	TP_STRUCT__entry(
-		__array(char,  comm,   TASK_COMM_LEN)
-		__field(pid_t, pid)
-		__field(int,   cpu_prefer)
-	),
-
-	TP_fast_assign(
-		memcpy(__entry->comm, tsk->comm, TASK_COMM_LEN);
-		__entry->pid            = tsk->pid;
-		__entry->cpu_prefer     = tsk->cpu_prefer;
-	),
-
-	TP_printk("pid=%d comm=%s cpu_prefer=%d",
-		__entry->pid, __entry->comm, __entry->cpu_prefer)
-);
-#endif
-
 #endif /* CONFIG_MTK_SCHED_EXTENSION */
