@@ -554,8 +554,7 @@ uclamp_st_restrict(struct task_struct *p, enum uclamp_id clamp_id)
 
 	if (UCLAMP_MIN == clamp_id && 0 == uc_max.value)
 		goto unlock;
-	if (!uc_req.user_defined || (uc_req.value != uc_max.value &&
-						uc_max.value != uclamp_none(clamp_id))) {
+	if (uc_req.value > uc_max.value || !uc_req.user_defined) {
 		rcu_read_unlock();
 		return uc_max;
 	}
