@@ -542,24 +542,20 @@ uclamp_st_restrict(struct task_struct *p, enum uclamp_id clamp_id)
 	struct uclamp_se uc_req = p->uclamp_req[clamp_id];
 	struct uclamp_se uc_max;
 
-	rcu_read_lock();
 	/*
 	 * Tasks in autogroups or root task group will be
 	 * restricted by system defaults.
 	 */
 	if (task_schedtune(p) == &root_schedtune)
-		goto unlock;
+		return uc_req;
 
 	uc_max = task_schedtune(p)->uclamp[clamp_id];
 
 	if (UCLAMP_MIN == clamp_id && 0 == uc_max.value)
-		goto unlock;
-	if (uc_req.value > uc_max.value || !uc_req.user_defined) {
-		rcu_read_unlock();
+		return uc_req;
+	if (uc_req.value > uc_max.value || !uc_req.user_defined)
 		return uc_max;
-	}
-unlock:
-	rcu_read_unlock();
+
 	return uc_req;
 }
 
