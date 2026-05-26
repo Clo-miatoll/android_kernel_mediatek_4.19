@@ -81,13 +81,6 @@ unsigned int aggressive_idle_pull(int this_cpu);
 
 #endif
 
-/* sched:  add for print aee log */
-#if defined(CONFIG_SMP) && defined(CONFIG_MTK_SCHED_EXTENSION)
-static inline int rq_cpu(const struct rq *rq) { return rq->cpu; }
-#else
-static inline int rq_cpu(const struct rq *rq) { return 0; }
-#endif
-
 #ifdef CONFIG_MTK_SCHED_EXTENSION
 extern unsigned int capacity_margin;
 static inline unsigned long map_util_freq_with_margin(
