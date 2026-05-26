@@ -260,6 +260,7 @@ const struct sched_class fair_sched_class;
 #ifdef CONFIG_FAIR_GROUP_SCHED
 static inline struct task_struct *task_of(struct sched_entity *se)
 {
+	SCHED_WARN_ON(!entity_is_task(se));
 	return container_of(se, struct task_struct, se);
 }
 
@@ -5286,7 +5287,6 @@ static inline void update_overutilized_status(struct rq *rq)
 		trace_sched_overutilized(1);
 	}
 }
-
 #else
 static inline void update_overutilized_status(struct rq *rq) { }
 #endif
@@ -5982,15 +5982,20 @@ schedtune_margin(unsigned long signal, long boost)
 	return margin;
 }
 
-static inline int
-schedtune_cpu_margin(unsigned long util, int cpu)
+inline long
+schedtune_cpu_margin_with(unsigned long util, int cpu, struct task_struct *p)
 {
-	int boost = schedtune_cpu_boost(cpu);
+	int boost = schedtune_cpu_boost_with(cpu, p);
+	long margin;
 
 	if (boost == 0)
-		return 0;
+		margin = 0;
+	else
+		margin = schedtune_margin(util, boost);
 
-	return schedtune_margin(util, boost);
+	trace_sched_boost_cpu(cpu, util, margin);
+
+	return margin;
 }
 
 long schedtune_task_margin(struct task_struct *task)
@@ -6008,22 +6013,10 @@ long schedtune_task_margin(struct task_struct *task)
 	return margin;
 }
 
-unsigned long
-stune_util(int cpu, unsigned long other_util)
-{
-	unsigned long util = min_t(unsigned long, SCHED_CAPACITY_SCALE,
-				   cpu_util_cfs(cpu_rq(cpu)) + other_util);
-	long margin = schedtune_cpu_margin(util, cpu);
-
-	trace_sched_boost_cpu(cpu, util, margin);
-
-	return util + margin;
-}
-
 #else /* CONFIG_SCHED_TUNE */
 
-static inline int
-schedtune_cpu_margin(unsigned long util, int cpu)
+inline long
+schedtune_cpu_margin_with(unsigned long util, int cpu, struct task_struct *p)
 {
 	return 0;
 }
@@ -6302,6 +6295,7 @@ static inline int find_idlest_cpu(struct sched_domain *sd, struct task_struct *p
 			sd = sd->child;
 			continue;
 		}
+
 		if (idle_cpu(new_cpu))
 			break;
 
@@ -7219,6 +7213,7 @@ static unsigned long mtk_cpu_util_next(int cpu, struct task_struct *p, int dst_c
 	unsigned long util_est, util = READ_ONCE(cfs_rq->avg.util_avg);
 
 	*util_energy = util;
+
 	/*
 	 * If @p migrates from @cpu to another, remove its contribution. Or,
 	 * if @p migrates from another CPU to @cpu, add its contribution. In
@@ -7666,7 +7661,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 			new_cpu = prev_cpu;
 		}
 
-		want_affine =!READ_ONCE(rd->overutilized) && !wake_wide(p, sibling_count_hint) &&
+		want_affine = !READ_ONCE(rd->overutilized) && !wake_wide(p, sibling_count_hint) &&
 			      !wake_cap(p, cpu, prev_cpu) &&
 			      cpumask_test_cpu(cpu, &p->cpus_allowed);
 	}
@@ -8525,6 +8520,7 @@ static struct task_struct *detach_one_task(struct lb_env *env)
 			continue;
 
 		detach_task(p, env);
+
 		/*
 		 * Right now, this is only the second place where
 		 * lb_gained[env->idle] is updated (other is detach_tasks)
@@ -9541,13 +9537,14 @@ next_group:
 		/* update overload indicator if we are at root domain */
 		WRITE_ONCE(rd->overload, sg_status & SG_OVERLOAD);
 
-		/* Updateover-utilization (tipping point, U >= 0) indicator */
+		/* Update over-utilization (tipping point, U >= 0) indicator */
 		WRITE_ONCE(rd->overutilized, sg_status & SG_OVERUTILIZED);
 		trace_sched_overutilized(!!(sg_status & SG_OVERUTILIZED));
 	} else if (sg_status & SG_OVERUTILIZED) {
 		WRITE_ONCE(env->dst_rq->rd->overutilized, SG_OVERUTILIZED);
 		trace_sched_overutilized(1);
 	}
+
 }
 
 /**
@@ -11091,6 +11088,7 @@ static int idle_balance(struct rq *this_rq, struct rq_flags *rf)
 		if (sd)
 			update_next_balance(sd, &next_balance);
 		rcu_read_unlock();
+
 		nohz_newidle_balance(this_rq);
 
 		goto out;
@@ -11222,6 +11220,7 @@ static void rq_offline_fair(struct rq *rq)
 	/* Ensure any throttled groups are reachable by pick_next_task */
 	unthrottle_offline_cfs_rqs(rq);
 }
+
 #endif /* CONFIG_SMP */
 
 /*

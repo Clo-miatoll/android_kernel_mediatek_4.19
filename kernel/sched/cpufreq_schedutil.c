@@ -237,6 +237,9 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 }
 #endif
 
+extern long
+schedtune_cpu_margin_with(unsigned long util, int cpu, struct task_struct *p);
+
 /*
  * This function computes an effective utilization for the given CPU, to be
  * used for frequency selection given the linear relation: f = u * f_max.
@@ -295,7 +298,11 @@ unsigned long schedutil_cpu_util(int cpu, unsigned long util_cfs,
 	 */
 	util = util_cfs + cpu_util_rt(rq);
 	if (type == FREQUENCY_UTIL)
+#ifdef CONFIG_SCHED_TUNE
+		util += schedtune_cpu_margin_with(util, cpu, p);
+#else
 		util = uclamp_rq_util_with(rq, util, p);
+#endif
 
 	dl_util = cpu_util_dl(rq);
 
@@ -349,12 +356,7 @@ unsigned long schedutil_cpu_util(int cpu, unsigned long util_cfs,
 static unsigned long sugov_get_util(struct sugov_cpu *sg_cpu)
 {
 	struct rq *rq = cpu_rq(sg_cpu->cpu);
-#ifdef CONFIG_SCHED_TUNE
-	unsigned long util = stune_util(sg_cpu->cpu, cpu_util_rt(rq));
-#else
-	unsigned long util = cpu_util_freq(sg_cpu->cpu);
-#endif
-	unsigned long util_cfs = util - cpu_util_rt(rq);
+	unsigned long util_cfs = cpu_util_cfs(rq);
 	unsigned long max = arch_scale_cpu_capacity(NULL, sg_cpu->cpu);
 
 	sg_cpu->max = max;
@@ -426,7 +428,6 @@ static void sugov_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
 	if (sg_cpu->iowait_boost) {
 		sg_cpu->iowait_boost =
 			min_t(unsigned int, sg_cpu->iowait_boost << 1, SCHED_CAPACITY_SCALE);
-
 		return;
 	}
 
@@ -555,7 +556,6 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 		policy->cur = next_f;
 	}
 #else
-
 	/*
 	 * This code runs under rq->lock for the target CPU, so it won't run
 	 * concurrently on two different CPUs for the same target and it is not
@@ -570,6 +570,7 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 	}
 #endif
 }
+
 
 static unsigned int sugov_next_freq_shared(struct sugov_cpu *sg_cpu, u64 time)
 {
