@@ -7648,9 +7648,8 @@ fail:
  * preempt must be disabled.
  */
 static int
-SELECT_TASK_RQ_FAIR(struct task_struct *p, int prev_cpu, int sd_flag,
-		int wake_flags, int sibling_count_hint)
-
+select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_flags,
+		    int sibling_count_hint)
 {
 	struct sched_domain *tmp, *sd = NULL;
 	struct root_domain *rd = cpu_rq(smp_processor_id())->rd;
@@ -7658,7 +7657,6 @@ SELECT_TASK_RQ_FAIR(struct task_struct *p, int prev_cpu, int sd_flag,
 	int new_cpu = prev_cpu;
 	int want_affine = 0;
 	int sync = (wake_flags & WF_SYNC) && !(current->flags & PF_EXITING);
-	int select_reason = LB_PREV;
 
 	if (sd_flag & SD_BALANCE_WAKE) {
 		record_wakee(p);
@@ -7669,8 +7667,7 @@ SELECT_TASK_RQ_FAIR(struct task_struct *p, int prev_cpu, int sd_flag,
 
 			new_cpu = find_energy_efficient_cpu(p, prev_cpu, sync);
 			if (new_cpu >= 0)
-				return LB_EAS | new_cpu;
-
+				return new_cpu;
 			new_cpu = prev_cpu;
 		}
 
@@ -7691,10 +7688,9 @@ sd_loop:
 		 */
 		if (want_affine && (tmp->flags & SD_WAKE_AFFINE) &&
 		    cpumask_test_cpu(prev_cpu, sched_domain_span(tmp))) {
-			if (cpu != prev_cpu) {
+			if (cpu != prev_cpu)
 				new_cpu = wake_affine(tmp, p, cpu, prev_cpu, sync);
-				select_reason = LB_WAKE_AFFINE;
-			}
+
 			sd = NULL; /* Prefer wake_affine over balance flags */
 			break;
 		}
@@ -7709,38 +7705,17 @@ sd_loop:
 		/* Slow path */
 		//new_cpu = find_idlest_cpu(sd, p, cpu, prev_cpu, sd_flag);
 		new_cpu = ___select_idle_sibling(p, prev_cpu, new_cpu);
-		select_reason = LB_IDLEST;
 	} else if (sd_flag & SD_BALANCE_WAKE) { /* XXX always ? */
 		/* Fast path */
 		new_cpu = ___select_idle_sibling(p, prev_cpu, new_cpu);
 		//new_cpu = select_idle_sibling(p, prev_cpu, new_cpu);
-		select_reason = LB_IDLE_SIBLING;
 
 		if (want_affine)
 			current->recent_used_cpu = cpu;
 	}
 	rcu_read_unlock();
 
-	return select_reason | new_cpu;
-}
-
-static inline int
-select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag,
-	int wake_flags, int sibling_count_hint)
-{
-	int result = 0;
-	int cpu;
-
-	result = SELECT_TASK_RQ_FAIR(p, prev_cpu, sd_flag, wake_flags,
-		sibling_count_hint);
-	cpu = (result & LB_CPU_MASK);
-
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-	trace_sched_select_task_rq(p, result, prev_cpu, cpu,
-		task_util(p), uclamp_task_util(p),
-		(schedtune_prefer_idle(p) > 0), wake_flags);
-#endif
-	return cpu;
+	return new_cpu;
 }
 
 static void detach_entity_cfs_rq(struct sched_entity *se);

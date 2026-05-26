@@ -10,7 +10,6 @@
 #include <linux/binfmts.h>
 #include "eas_plus.h"
 
-
 /*
  * Tracepoint for calling kthread_stop, performed to end a kthread:
  */

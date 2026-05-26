@@ -11,15 +11,6 @@
 #include <linux/cpumask.h>
 #include <linux/list_sort.h>
 
-#define LB_POLICY_SHIFT 16
-#define LB_CPU_MASK ((1 << LB_POLICY_SHIFT) - 1)
-
-#define LB_PREV          (0x0  << LB_POLICY_SHIFT)
-#define LB_EAS           (0x1  << LB_POLICY_SHIFT)
-#define LB_WAKE_AFFINE   (0x2  << LB_POLICY_SHIFT)
-#define LB_IDLEST        (0x4  << LB_POLICY_SHIFT)
-#define LB_IDLE_SIBLING  (0x8  << LB_POLICY_SHIFT)
-
 #ifdef CONFIG_MTK_SCHED_EXTENSION
 #if defined(CONFIG_ENERGY_MODEL) && defined(CONFIG_CPU_FREQ_GOV_SCHEDUTIL)
 struct perf_order_domain {
