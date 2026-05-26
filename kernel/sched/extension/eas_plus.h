@@ -80,16 +80,3 @@ unsigned int aggressive_idle_pull(int this_cpu);
 #endif /* CONFIG_MTK_SCHED_EXTENSION */
 
 #endif
-
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-extern unsigned int capacity_margin;
-static inline unsigned long map_util_freq_with_margin(
-					unsigned long util,
-					unsigned long freq,
-					unsigned long cap)
-{
-	freq = freq * util / cap;
-	freq = freq / SCHED_CAPACITY_SCALE * capacity_margin;
-	return freq;
-}
-#endif
