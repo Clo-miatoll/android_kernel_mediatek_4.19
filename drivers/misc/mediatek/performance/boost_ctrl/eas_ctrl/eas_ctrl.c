@@ -25,7 +25,6 @@
 /* boost value */
 static struct mutex boost_eas;
 
-static bool perf_sched_big_task_rotation;
 static pid_t last_cpu_prefer_pid;
 static int last_cpu_perfer_type;
 
@@ -60,37 +59,6 @@ static unsigned long policy_mask[NR_CGROUP];
 /************************/
 
 /********************************************************************/
-
-/* Add procfs to control sysctl_sched_rotation_enable */
-/* sysctl_sched_rotation_enable: eas_ctrl_plat.h */
-static ssize_t perfmgr_sched_big_task_rotation_proc_write(struct file *filp,
-		const char *ubuf, size_t cnt, loff_t *pos)
-{
-	int data = 0;
-	int rv = check_proc_write(&data, ubuf, cnt);
-
-	if (rv != 0)
-		return rv;
-
-	perf_sched_big_task_rotation = data;
-
-#ifdef CONFIG_MTK_SCHED_BIG_TASK_MIGRATE
-	if (data)
-		set_sched_rotation_enable(true);
-	else
-		set_sched_rotation_enable(false);
-#endif
-
-	return cnt;
-}
-
-static int perfmgr_sched_big_task_rotation_proc_show(struct seq_file *m,
-	void *v)
-{
-	seq_printf(m, "%d\n", perf_sched_big_task_rotation);
-
-	return 0;
-}
 
 /* Add procfs to control sched_boost */
 /* set_sched_boost_type: eas_ctrl_plat.h */
@@ -671,7 +639,6 @@ static int perfmgr_debug_ta_boost_proc_show(struct seq_file *m, void *v)
 PROC_FOPS_RW(m_sched_migrate_cost_n);
 PROC_FOPS_RW(sched_stune_task_thresh);
 #endif
-PROC_FOPS_RW(sched_big_task_rotation);
 PROC_FOPS_RW(sched_boost);
 PROC_FOPS_RW(cpu_prefer);
 
@@ -717,7 +684,6 @@ int eas_ctrl_init(struct proc_dir_entry *parent)
 		PROC_ENTRY(m_sched_migrate_cost_n),
 		PROC_ENTRY(sched_stune_task_thresh),
 #endif
-		PROC_ENTRY(sched_big_task_rotation),
 		PROC_ENTRY(sched_boost),
 		PROC_ENTRY(cpu_prefer),
 #ifdef MTK_K14_EAS_BOOST
@@ -749,7 +715,6 @@ int eas_ctrl_init(struct proc_dir_entry *parent)
 		}
 	}
 
-	perf_sched_big_task_rotation = 0;
 #ifdef MTK_K14_EAS_BOOST
 #if defined(CONFIG_SCHED_TUNE)
 	/* boost value */

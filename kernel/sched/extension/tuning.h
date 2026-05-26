@@ -34,10 +34,6 @@ void cpu_util_update(struct cgroup_subsys_state *css,
 extern int valid_cpu_prefer(int task_prefer);
 #endif
 
-#ifdef CONFIG_MTK_SCHED_BIG_TASK_MIGRATE
-extern bool big_task_rotation_enable;
-#endif
-
 #endif /* CONFIG_MTK_SCHED_EXTENSION */
 
 #endif

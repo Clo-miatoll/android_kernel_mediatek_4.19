@@ -92,34 +92,6 @@ void select_task_prefer_cpu_fair(struct task_struct *p, int *result);
 int cpu_prefer(struct task_struct *task);
 #endif
 
-#ifdef CONFIG_MTK_SCHED_BIG_TASK_MIGRATE
-#include "../../drivers/misc/mediatek/include/mt-plat/eas_ctrl.h"
-#define TASK_ROTATION_THRESHOLD_NS      6000000
-#define HEAVY_TASK_NUM  4
-
-struct task_rotate_work {
-	struct work_struct w;
-	struct task_struct *src_task;
-	struct task_struct *dst_task;
-	int src_cpu;
-	int dst_cpu;
-};
-
-struct task_rotate_reset_uclamp_work {
-	struct work_struct w;
-};
-
-DECLARE_PER_CPU(struct task_rotate_work, task_rotate_works);
-extern bool big_task_rotation_enable;
-extern void task_rotate_work_init(void);
-extern void check_for_migration(struct task_struct *p);
-extern int is_reserved(int cpu);
-extern bool is_min_capacity_cpu(int cpu);
-extern bool is_max_capacity_cpu(int cpu);
-extern struct task_rotate_reset_uclamp_work task_rotate_reset_uclamp_works;
-extern bool set_uclamp;
-#endif
-
 #ifdef CONFIG_MTK_SCHED_CPU_PREFER
 int task_cs_cpu_perfer(struct task_struct *task);
 #endif

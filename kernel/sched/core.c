@@ -1396,9 +1396,6 @@ static inline void enqueue_task(struct rq *rq, struct task_struct *p, int flags)
 	uclamp_rq_inc(rq, p);
 	sched_queuedeq_task(1, rq, p, flags);
 	p->sched_class->enqueue_task(rq, p, flags);
-
-	/* update last_enqueued_ts for big task rotation */
-	p->last_enqueued_ts = ktime_get_ns();
 }
 
 static inline void dequeue_task(struct rq *rq, struct task_struct *p, int flags)
@@ -1859,7 +1856,7 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 	__set_task_cpu(p, new_cpu);
 }
 
-#if defined(CONFIG_NUMA_BALANCING) || defined(CONFIG_MTK_SCHED_BIG_TASK_MIGRATE)
+#ifdef CONFIG_NUMA_BALANCING
 static void __migrate_swap_task(struct task_struct *p, int cpu)
 {
 	if (task_on_rq_queued(p)) {
@@ -1976,7 +1973,7 @@ int migrate_swap(struct task_struct *cur, struct task_struct *p,
 out:
 	return ret;
 }
-#endif /* CONFIG_NUMA_BALANCING || CONFIG_MTK_SCHED_BIG_TASK_MIGRATE */
+#endif /* CONFIG_NUMA_BALANCING */
 
 /*
  * wait_task_inactive - wait for a thread to unschedule.
@@ -3120,7 +3117,6 @@ void wake_up_new_task(struct task_struct *p)
 	update_rq_clock(rq);
 	post_init_entity_util_avg(&p->se);
 
-	p->last_enqueued_ts = ktime_get_ns();
 	activate_task(rq, p, ENQUEUE_NOCLOCK);
 	p->on_rq = TASK_ON_RQ_QUEUED;
 	trace_sched_wakeup_new(p);
@@ -3767,10 +3763,6 @@ void scheduler_tick(void)
 	trigger_load_balance(rq);
 #endif
 
-#ifdef CONFIG_MTK_SCHED_BIG_TASK_MIGRATE
-	if (curr->sched_class == &fair_sched_class)
-		check_for_migration(curr);
-#endif
 #ifdef CONFIG_MTK_QOS_FRAMEWORK
 	qos_prefetch_tick(cpu);
 #endif /* CONFIG_MTK_QOS_FRAMEWORK */
@@ -6871,10 +6863,6 @@ void __init sched_init(void)
 	init_uclamp();
 
 	scheduler_running = 1;
-
-#ifdef CONFIG_MTK_SCHED_BIG_TASK_MIGRATE
-	task_rotate_work_init();
-#endif
 }
 
 #ifdef CONFIG_DEBUG_ATOMIC_SLEEP

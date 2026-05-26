@@ -34,14 +34,6 @@ int sched_set_cpuprefer(pid_t pid, unsigned int prefer_type)
 EXPORT_SYMBOL(sched_set_cpuprefer);
 #endif
 
-#ifdef CONFIG_MTK_SCHED_BIG_TASK_MIGRATE
-void set_sched_rotation_enable(bool enable)
-{
-	big_task_rotation_enable = enable;
-}
-EXPORT_SYMBOL(set_sched_rotation_enable);
-#endif /* CONFIG_MTK_SCHED_BIG_TASK_MIGRATE */
-
 #if defined(CONFIG_CPUSETS) && defined(CONFIG_MTK_SCHED_CPU_PREFER)
 enum {
 	SCHED_NO_BOOST = 0,
