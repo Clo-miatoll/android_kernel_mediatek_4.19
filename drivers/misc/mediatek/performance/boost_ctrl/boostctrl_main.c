@@ -19,8 +19,6 @@ int init_boostctrl(struct proc_dir_entry *parent)
     /* init topology info first */
 	topo_ctrl_init(bstctrl_root);
 
-	cpu_ctrl_init(bstctrl_root);
-
 	dram_ctrl_init(bstctrl_root);
 
 	return 0;

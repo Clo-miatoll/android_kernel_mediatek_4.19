@@ -9,10 +9,6 @@
 /*boost controller parent*/
 int init_boostctrl(struct proc_dir_entry *parent);
 
-/*cpu controller*/
-int cpu_ctrl_init(struct proc_dir_entry *parent);
-void cpu_ctrl_exit(void);
-
 /*dram controller*/
 int dram_ctrl_init(struct proc_dir_entry *parent);
 
