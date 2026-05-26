@@ -7564,7 +7564,7 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu, int sy
 
 	/* If there is only one sensible candidate, select it now. */
 	cpu = cpumask_first(candidates);
-	if (weight == 1 && ((schedtune_prefer_idle(p) && idle_cpu(cpu)) ||
+	if (weight == 1 && ((uclamp_latency_sensitive(p) && idle_cpu(cpu)) ||
 			    (cpu == prev_cpu))) {
 		best_energy_cpu = cpu;
 		goto unlock;

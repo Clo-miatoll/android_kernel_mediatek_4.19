@@ -741,7 +741,7 @@ static void set_load_weight(struct task_struct *p, bool update_load)
  * requests are serialized using a mutex to reduce the risk of conflicting
  * updates or API abuses.
  */
-DEFINE_MUTEX(uclamp_mutex);
+static DEFINE_MUTEX(uclamp_mutex);
 
 /* Max allowed minimum utilization */
 unsigned int sysctl_sched_uclamp_util_min = SCHED_CAPACITY_SCALE;
@@ -752,7 +752,30 @@ unsigned int sysctl_sched_uclamp_util_max = SCHED_CAPACITY_SCALE;
 /* All clamps are required to be less or equal than these values */
 static struct uclamp_se uclamp_default[UCLAMP_CNT];
 
-inline void uclamp_se_set(struct uclamp_se *uc_se,
+/* Integer rounded range for each bucket */
+#define UCLAMP_BUCKET_DELTA DIV_ROUND_CLOSEST(SCHED_CAPACITY_SCALE, UCLAMP_BUCKETS)
+
+#define for_each_clamp_id(clamp_id) \
+	for ((clamp_id) = 0; (clamp_id) < UCLAMP_CNT; (clamp_id)++)
+
+static inline unsigned int uclamp_bucket_id(unsigned int clamp_value)
+{
+	return min_t(unsigned int, clamp_value / UCLAMP_BUCKET_DELTA, UCLAMP_BUCKETS - 1);
+}
+
+static inline unsigned int uclamp_bucket_base_value(unsigned int clamp_value)
+{
+	return UCLAMP_BUCKET_DELTA * uclamp_bucket_id(clamp_value);
+}
+
+static inline unsigned int uclamp_none(enum uclamp_id clamp_id)
+{
+	if (clamp_id == UCLAMP_MIN)
+		return 0;
+	return SCHED_CAPACITY_SCALE;
+}
+
+static inline void uclamp_se_set(struct uclamp_se *uc_se,
 				 unsigned int value, bool user_defined)
 {
 	uc_se->value = value;
@@ -832,19 +855,6 @@ uclamp_tg_restrict(struct task_struct *p, enum uclamp_id clamp_id)
 	return uc_req;
 }
 
-static inline struct uclamp_se
-uclamp_group_restrict(struct task_struct *p, enum uclamp_id clamp_id)
-{
-	struct uclamp_se uc_req;
-#ifdef CONFIG_SCHED_TUNE
-	uc_req = uclamp_st_restrict(p, clamp_id);
-#else
-	uc_req = uclamp_tg_restrict(p, clamp_id);
-#endif
-	return uc_req;
-}
-
-
 /*
  * The effective clamp bucket index of a task depends on, by increasing
  * priority:
@@ -856,7 +866,7 @@ uclamp_group_restrict(struct task_struct *p, enum uclamp_id clamp_id)
 static inline struct uclamp_se
 uclamp_eff_get(struct task_struct *p, enum uclamp_id clamp_id)
 {
-	struct uclamp_se uc_req = uclamp_group_restrict(p, clamp_id);
+	struct uclamp_se uc_req = uclamp_tg_restrict(p, clamp_id);
 	struct uclamp_se uc_max = uclamp_default[clamp_id];
 
 	/* System default restrictions always apply */
@@ -1022,7 +1032,7 @@ uclamp_update_active(struct task_struct *p, enum uclamp_id clamp_id)
 }
 
 #ifdef CONFIG_UCLAMP_TASK_GROUP
-void
+static inline void
 uclamp_update_active_tasks(struct cgroup_subsys_state *css,
 			   unsigned int clamps)
 {
@@ -1039,9 +1049,7 @@ uclamp_update_active_tasks(struct cgroup_subsys_state *css,
 	}
 	css_task_iter_end(&it);
 }
-#endif
 
-#if defined(CONFIG_UCLAMP_TASK_GROUP) && !defined(CONFIG_SCHED_TUNE)
 static void cpu_util_update_eff(struct cgroup_subsys_state *css);
 static void uclamp_update_root_tg(void)
 {
@@ -1056,7 +1064,7 @@ static void uclamp_update_root_tg(void)
 	cpu_util_update_eff(&root_task_group.css);
 	rcu_read_unlock();
 }
-#elif !defined(CONFIG_UCLAMP_TASK_GROUP) && !defined(CONFIG_SCHED_TUNE)
+#else
 static void uclamp_update_root_tg(void) { }
 #endif
 
@@ -1096,11 +1104,7 @@ int sysctl_sched_uclamp_handler(struct ctl_table *table, int write,
 	}
 
 	if (update_root_tg)
-#if defined(CONFIG_UCLAMP_TASK_GROUP) && defined(CONFIG_SCHED_TUNE)
-		uclamp_update_root_st();
-#else
 		uclamp_update_root_tg();
-#endif
 
 	/*
 	 * We update all RUNNABLE tasks only when task groups are in use.
@@ -1196,38 +1200,6 @@ static void uclamp_fork(struct task_struct *p)
 	}
 }
 
-int set_task_util_min(pid_t pid, unsigned int util_min)
-{
-	struct task_struct *p;
-	int ret = -EINVAL;
-
-	struct sched_attr attr = {
-		.sched_flags =  SCHED_FLAG_KEEP_PARAMS |
-				SCHED_FLAG_UTIL_CLAMP_MIN |
-				SCHED_FLAG_RESET_ON_FORK,
-		.sched_util_min = util_min,
-	};
-
-	if (pid < 0)
-		return ret;
-
-	rcu_read_lock();
-	p = find_task_by_vpid(pid);
-
-	if (likely(p))
-		get_task_struct(p);
-
-	rcu_read_unlock();
-
-	if (likely(p)) {
-		ret = sched_setattr_nocheck(p, &attr);
-		put_task_struct(p);
-	}
-
-	return ret;
-}
-EXPORT_SYMBOL(set_task_util_min);
-
 #ifdef CONFIG_SMP
 unsigned int uclamp_task(struct task_struct *p)
 {
@@ -1247,9 +1219,7 @@ bool uclamp_boosted(struct task_struct *p)
 
 bool uclamp_latency_sensitive(struct task_struct *p)
 {
-#if defined(CONFIG_SCHED_TUNE)
-	return schedtune_prefer_idle(p) != 0;
-#elif defined(CONFIG_UCLAMP_TASK_GROUP)
+#ifdef CONFIG_UCLAMP_TASK_GROUP
 	struct cgroup_subsys_state *css = task_css(p, cpu_cgrp_id);
 	struct task_group *tg;
 
@@ -1287,9 +1257,7 @@ static void __init init_uclamp(void)
 	uclamp_se_set(&uc_max, uclamp_none(UCLAMP_MAX), false);
 	for_each_clamp_id(clamp_id) {
 		uclamp_default[clamp_id] = uc_max;
-#if defined(CONFIG_UCLAMP_TASK_GROUP) && defined(CONFIG_SCHED_TUNE)
-		init_root_st_uclamp(clamp_id);
-#elif defined(CONFIG_UCLAMP_TASK_GROUP)
+#ifdef CONFIG_UCLAMP_TASK_GROUP
 		root_task_group.uclamp_req[clamp_id] = uc_max;
 		root_task_group.uclamp[clamp_id] = uc_max;
 #endif
@@ -7155,7 +7123,7 @@ static int cpu_cgroup_css_online(struct cgroup_subsys_state *css)
 	if (parent)
 		sched_online_group(tg, parent);
 
-#if defined(CONFIG_UCLAMP_TASK_GROUP) && !defined(CONFIG_SCHED_TUNE)
+#ifdef CONFIG_UCLAMP_TASK_GROUP
 	/* Propagate the effective uclamp value for the new group */
 	cpu_util_update_eff(css);
 #endif
@@ -7237,8 +7205,7 @@ static void cpu_cgroup_attach(struct cgroup_taskset *tset)
 		sched_move_task(task);
 }
 
-
-#if defined(CONFIG_UCLAMP_TASK_GROUP) && !defined(CONFIG_SCHED_TUNE)
+#ifdef CONFIG_UCLAMP_TASK_GROUP
 static void cpu_util_update_eff(struct cgroup_subsys_state *css)
 {
 	struct cgroup_subsys_state *top_css = css;
@@ -7776,7 +7743,7 @@ static struct cftype cpu_legacy_files[] = {
 		.write_u64 = cpu_rt_period_write_uint,
 	},
 #endif
-#if defined(CONFIG_UCLAMP_TASK_GROUP) && !defined(CONFIG_SCHED_TUNE)
+#ifdef CONFIG_UCLAMP_TASK_GROUP
 	{
 		.name = "uclamp.min",
 		.flags = CFTYPE_NOT_ON_ROOT,
@@ -7963,7 +7930,7 @@ static struct cftype cpu_files[] = {
 		.write = cpu_max_write,
 	},
 #endif
-#if defined(CONFIG_UCLAMP_TASK_GROUP) && !defined(CONFIG_SCHED_TUNE)
+#ifdef CONFIG_UCLAMP_TASK_GROUP
 	{
 		.name = "uclamp.min",
 		.flags = CFTYPE_NOT_ON_ROOT,
