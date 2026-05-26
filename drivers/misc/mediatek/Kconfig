@@ -428,7 +428,6 @@ config MTK_PERFORMANCE_MODULE
 	  Select "y" if you want to enable performance features.
 	  Select "n" if unsure.
 
-source "drivers/misc/mediatek/performance/Kconfig"
 endmenu # PPT
 
 menu "TinySys"
