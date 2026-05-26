@@ -39,10 +39,6 @@ static int cfp_init_ret;
 
 int powerhal_tid;
 
-#ifdef MTK_K14_CPU_BOOST
-#include "eas_ctrl_plat.h"
-#endif
-
 /*******************************************/
 int update_userlimit_cpu_freq(int kicker, int num_cluster
 		, struct cpu_ctrl_data *freq_limit)
