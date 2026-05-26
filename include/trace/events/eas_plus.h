@@ -153,36 +153,4 @@ TRACE_EVENT(sched_em_cpu_energy,
 		__entry->sum_util,
 		__entry->opp_cap)
 );
-
-
-/*
- * Tracepoint for task migrations.
- */
-TRACE_EVENT(sched_migrate,
-
-	TP_PROTO(struct task_struct *tsk, int src, int dest, int force),
-
-	TP_ARGS(tsk, src, dest, force),
-
-	TP_STRUCT__entry(
-		__array(char, comm, TASK_COMM_LEN)
-		__field(pid_t, pid)
-		__field(int,  src)
-		__field(int,  dest)
-		__field(int,  force)
-		),
-
-	TP_fast_assign(
-		memcpy(__entry->comm, tsk->comm, TASK_COMM_LEN);
-		__entry->pid   = tsk->pid;
-		__entry->src  = src;
-		__entry->dest  = dest;
-		__entry->force = force;
-		),
-
-	TP_printk("pid=%d comm=%s src=%d dest=%d force=%d",
-		__entry->pid, __entry->comm,
-		__entry->src, __entry->dest,
-		__entry->force)
-);
 #endif /* CONFIG_MTK_SCHED_EXTENSION */

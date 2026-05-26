@@ -1025,7 +1025,6 @@ struct rq {
 	struct cpuidle_state	*idle_state;
 	int			idle_state_idx;
 #endif
-
 };
 
 #ifdef CONFIG_FAIR_GROUP_SCHED

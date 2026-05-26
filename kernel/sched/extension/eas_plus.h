@@ -21,19 +21,6 @@
 #define LB_IDLE_SIBLING  (0x8  << LB_POLICY_SHIFT)
 
 #ifdef CONFIG_MTK_SCHED_EXTENSION
-
-#define MIGR_IDLE_BALANCE      1
-#define MIGR_IDLE_RUNNING      2
-#define MIGR_ROTATION          3
-DECLARE_PER_CPU(struct task_struct*, migrate_task);
-
-struct rq *__migrate_task(struct rq *rq, struct rq_flags *rf,
-				struct task_struct *p, int dest_cpu);
-int active_load_balance_cpu_stop(void *data);
-unsigned int aggressive_idle_pull(int this_cpu);
-int migrate_running_task(int this_cpu, struct task_struct *p,
-				struct rq *target);
-
 #if defined(CONFIG_ENERGY_MODEL) && defined(CONFIG_CPU_FREQ_GOV_SCHEDUTIL)
 struct perf_order_domain {
 	struct cpumask cpus;
@@ -65,16 +52,6 @@ unsigned int cpu_is_slowest(int cpu);
 
 #ifdef CONFIG_MTK_SCHED_LB_ENHANCEMENT
 bool is_intra_domain(int prev, int target);
-#endif
-
-#ifdef CONFIG_MTK_IDLE_BALANCE_ENHANCEMENT
-#define MIGR_IDLE_BALANCE      1
-#define MIGR_IDLE_RUNNING      2
-
-struct rq *__migrate_task(struct rq *rq, struct rq_flags *rf,
-					struct task_struct *p, int dest_cpu);
-int active_load_balance_cpu_stop(void *data);
-unsigned int aggressive_idle_pull(int this_cpu);
 #endif
 
 #endif /* CONFIG_MTK_SCHED_EXTENSION */
