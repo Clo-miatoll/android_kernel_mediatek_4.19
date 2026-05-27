@@ -292,8 +292,6 @@ static int unregister_gadget(struct gadget_info *gi)
 	if (!gi->composite.gadget_driver.udc_name)
 		return -ENODEV;
 
-	pr_info("%s\n", __func__);
-
 	gi->unbinding = true;
 	ret = usb_gadget_unregister_driver(&gi->composite.gadget_driver);
 	if (ret)
@@ -320,8 +318,6 @@ static ssize_t gadget_dev_desc_UDC_store(struct config_item *item,
 		return -ENOMEM;
 	if (name[len - 1] == '\n')
 		name[len - 1] = '\0';
-
-	pr_info("%s write %s\n", __func__, name);
 
 	mutex_lock(&gi->lock);
 
@@ -433,8 +429,6 @@ static int config_usb_cfg_link(
 	struct usb_function *f;
 	int ret;
 
-	pr_info("%s %s<-->%s\n", __func__,
-			usb_cfg_ci->ci_name, usb_func_ci->ci_name);
 	mutex_lock(&gi->lock);
 	/*
 	 * Make sure this function is from within our _this_ gadget and not
@@ -484,8 +478,6 @@ static void config_usb_cfg_unlink(
 			struct usb_function_instance, group);
 	struct usb_function *f;
 
-	pr_info("%s %s<-/->%s\n", __func__,
-			usb_cfg_ci->ci_name, usb_func_ci->ci_name);
 	/*
 	 * ideally I would like to forbid to unlink functions while a gadget is
 	 * bound to an UDC. Since this isn't possible at the moment, we simply
@@ -603,8 +595,6 @@ static struct config_group *function_make(
 	if (ret >= MAX_NAME_LEN)
 		return ERR_PTR(-ENAMETOOLONG);
 
-	pr_info("%s name=%s\n", __func__, name);
-
 	func_name = buf;
 	instance_name = strchr(func_name, '.');
 	if (!instance_name) {
@@ -646,7 +636,6 @@ static void function_drop(
 	struct usb_function_instance *fi = to_usb_function_instance(item);
 	struct gadget_info *gi;
 
-	pr_info("%s name=%s\n", __func__, item->ci_name);
 	gi = container_of(group, struct gadget_info, functions_group);
 
 	mutex_lock(&gi->lock);
@@ -696,7 +685,6 @@ static struct config_group *config_desc_make(
 	u8 num;
 	int ret;
 
-	pr_info("%s name=%s\n", __func__, name);
 	gi = container_of(group, struct gadget_info, configs_group);
 	ret = snprintf(buf, MAX_NAME_LEN, "%s", name);
 	if (ret >= MAX_NAME_LEN)
@@ -825,8 +813,6 @@ static ssize_t os_desc_use_store(struct config_item *item, const char *page,
 	}
 	mutex_unlock(&gi->lock);
 
-	pr_info("%s %s OS DESC\n", __func__, (use?"Use":"NO use"));
-
 	return ret;
 }
 
@@ -850,8 +836,6 @@ static ssize_t os_desc_b_vendor_code_store(struct config_item *item,
 		ret = len;
 	}
 	mutex_unlock(&gi->lock);
-
-	pr_info("%s Vendor Code=%d\n", __func__, gi->b_vendor_code);
 
 	return ret;
 }
@@ -1177,7 +1161,6 @@ static ssize_t interf_grp_compatible_id_store(struct config_item *item,
 	if (desc->opts_mutex)
 		mutex_unlock(desc->opts_mutex);
 
-	pr_info("%s ext_compat_id=%s\n", __func__, desc->ext_compat_id);
 	return len;
 }
 
@@ -1204,7 +1187,6 @@ static ssize_t interf_grp_sub_compatible_id_store(struct config_item *item,
 	if (desc->opts_mutex)
 		mutex_unlock(desc->opts_mutex);
 
-	pr_info("%s ext_compat_id=%s\n", __func__, desc->ext_compat_id);
 	return len;
 }
 
@@ -1279,8 +1261,6 @@ static void purge_configs_funcs(struct gadget_info *gi)
 {
 	struct usb_configuration	*c;
 
-	pr_info("%s\n", __func__);
-
 	list_for_each_entry(c, &gi->cdev.configs, list) {
 		struct usb_function *f, *tmp;
 		struct config_usb_cfg *cfg;
@@ -1317,8 +1297,6 @@ static int configfs_composite_bind(struct usb_gadget *gadget,
 	struct usb_string		*s;
 	unsigned			i;
 	int				ret;
-
-	pr_info("%s\n", __func__);
 
 	/* the gi->lock is hold by the caller */
 	gi->unbind = 0;
@@ -1557,7 +1535,6 @@ static void configfs_composite_unbind(struct usb_gadget *gadget)
 	struct gadget_info		*gi;
 	unsigned long flags;
 
-	pr_info("%s\n", __func__);
 	/* the gi->lock is hold by the caller */
 
 	cdev = get_gadget_data(gadget);
@@ -1751,8 +1728,6 @@ static ssize_t state_show(struct device *pdev, struct device_attribute *attr,
 	else if (dev->connected)
 		state = "CONNECTED";
 	spin_unlock_irqrestore(&cdev->lock, flags);
-
-	pr_info("%s %s\n", __func__, state);
 out:
 	return sprintf(buf, "%s\n", state);
 }
@@ -1818,8 +1793,6 @@ static struct config_group *gadgets_make(
 		const char *name)
 {
 	struct gadget_info *gi;
-
-	pr_info("%s name=%s\n", __func__, name);
 
 	gi = kzalloc(sizeof(*gi), GFP_KERNEL);
 	if (!gi)
