@@ -632,7 +632,7 @@ lockdep_rcu_suspicious(const char *file, const int line, const char *s)
 }
 #endif
 
-#ifdef CONFIG_LOCKDEP
+#ifdef CONFIG_PROVE_LOCKING
 void check_held_locks(int force);
 void mt_aee_dump_held_locks(void);
 #else
