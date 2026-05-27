@@ -174,10 +174,7 @@ static const char * const held_lock_white_list[] = {
 	"&f->f_pos_lock",
 	"&p->lock",
 	"&of->mutex",
-	"&epfile->mutex",
-	"&session->notif_wait_lock",
-	"(&item_q->work)",
-	"\"%s\"\"cmdq_flushq\""
+	"&epfile->mutex"
 };
 
 #define lock_mon_enabled()	lock_mon_enable
@@ -230,22 +227,12 @@ static unsigned long sec_low(unsigned long long nsec)
 #define T_BOTH      (T_KERNEL | T_FTRACE)
 #define M_LOCK_MON  0x100  /* dump trace by lock monitor */
 
-#if defined(CONFIG_KASAN) || defined(CONFIG_UBSAN)
-#define MAX_WARN_LOCKS 30
-#else
-#define MAX_WARN_LOCKS 100
-#endif
-static unsigned int warn_locks;
-
 static void lock_mon_msg(char *buf, int out)
 {
 	if (out & T_FTRACE)
 		trace_lock_monitor_msg(buf);
-	/* check warn_locks to avoid printing too much log */
-	if (out & T_KERNEL && warn_locks <= MAX_WARN_LOCKS)
+	if (out & T_KERNEL)
 		pr_info("%s\n", buf);
-	if (out & T_KERNEL && warn_locks == MAX_WARN_LOCKS)
-		pr_info("[STOP] warn_locks >= %d\n", MAX_WARN_LOCKS);
 #ifdef CONFIG_MTK_AEE_IPANIC
 	if (out & T_SRAM)
 		aee_sram_fiq_log(buf);
@@ -5078,7 +5065,7 @@ trace_circular_bug(struct lock_list *this,
 	lock_dbg("other info that might help us debug this:");
 	lockdep_trace_held_locks(curr);
 
-	lock_dbg("current backtrace:");
+	lock_dbg("stack backtrace:");
 	dump_curr_stack();
 
 	return 0;
@@ -5370,6 +5357,12 @@ __remove_held_lock(struct lockdep_map *lock, int nested, unsigned long ip)
 	curr->lockdep_depth = i;
 }
 
+static const char * const task_stats[] = {
+	"running",
+	"interruptible",
+	"uninterruptible"
+};
+
 static void task_show_stack(struct task_struct *task, int output)
 {
 	struct stack_trace trace;
@@ -5391,9 +5384,9 @@ static void task_show_stack(struct task_struct *task, int output)
 		trace.nr_entries--;
 
 	if (!(output & M_LOCK_MON)) {
-		snprintf(buf, sizeof(buf), " %s/%d, stat[%c] cpu[%d]:%s",
+		snprintf(buf, sizeof(buf), " %s/%d, stat[%s] cpu[%d]:%s",
 			 task->comm, task->pid,
-			 task_state_to_char(task), task_cpu(task),
+			 task_stats[task->state & 0x3], task_cpu(task),
 			 (output == T_SRAM) ? "\n" : "");
 		lock_mon_msg(buf, output);
 	}
@@ -5404,8 +5397,8 @@ static void task_show_stack(struct task_struct *task, int output)
 	}
 
 	if (output & M_LOCK_MON) {
-		snprintf(buf, sizeof(buf), "  stack of %s/%d:%s",
-			 task->comm, task->pid, (output == T_SRAM) ? "\n" : "");
+		snprintf(buf, sizeof(buf), " %s/%d:%s", task->comm,
+			 task->pid, (output == T_SRAM) ? "\n" : "");
 		lock_mon_msg(buf, output);
 	}
 
@@ -5417,14 +5410,6 @@ static void task_show_stack(struct task_struct *task, int output)
 
 	mutex_unlock(&task->signal->cred_guard_mutex);
 }
-
-static void lock_monitor_aee(void);
-#if defined(CONFIG_KASAN) || defined(CONFIG_UBSAN)
-/* do not trigger aee on bad performance loads */
-static bool lock_mon_aee;
-#else
-static bool lock_mon_aee = 1;
-#endif
 
 static void
 lockdep_check_held_locks(struct task_struct *curr, bool en, bool aee)
@@ -5499,12 +5484,12 @@ lockdep_check_held_locks(struct task_struct *curr, bool en, bool aee)
 			    hlock->timestamp != timestamp_bak)
 				continue;
 
-			warn_locks++;
 			snprintf(buf_lock, sizeof(buf_lock),
-				 "[%p] (%s) held/waited by %s/%d[%c] on CPU#%d from [%lld.%06lu]%s",
+				 "[%p] (%s) held/waited by %s/%d/[%ld] on CPU#%d/IRQ[%s] from [%lld.%06lu]%s",
 				 hlock->instance, name,
 				 curr->comm, curr->pid,
-				 task_state_to_char(curr), task_cpu(curr),
+				 curr->state, task_cpu(curr),
+				 hlock->hardirqs_off ? "off" : "on",
 				 sec_high(hlock->timestamp),
 				 sec_low(hlock->timestamp),
 				 (output1 == T_SRAM) ? "\n" : "");
@@ -5513,12 +5498,6 @@ lockdep_check_held_locks(struct task_struct *curr, bool en, bool aee)
 			if (t_diff > lock_mon_2nd_th_ms && en)
 				output2 = T_BOTH | M_LOCK_MON;
 			output2 = aee ? T_SRAM : output2;
-
-			/* Catch the condition that too many locks are held */
-			if (lock_mon_aee && warn_locks > MAX_WARN_LOCKS) {
-				lock_mon_aee = 0;
-				lock_monitor_aee();
-			}
 
 			/* locks might be released in runtime */
 			if (hlock->timestamp == 0 ||
@@ -5611,7 +5590,6 @@ retry:
 		unlock = 0;
 	}
 
-	warn_locks = 0;
 	do_each_thread(g, p) {
 		if (p->lockdep_depth)
 			lockdep_check_held_locks(p, force, 0);
@@ -5629,27 +5607,35 @@ EXPORT_SYMBOL_GPL(check_held_locks);
 
 static void show_debug_locks_state(void)
 {
-	static unsigned long long pre_time_sec;
-	unsigned long long time_sec = sec_high(sched_clock());
+	char buf[64];
+	unsigned long long time_sec;
 
-	/* check debug_locks per 15 seconds */
-	if (debug_locks || time_sec - pre_time_sec < 15)
-		return;
-	pre_time_sec = time_sec;
+	if (nr_lock_classes >= MAX_LOCKDEP_KEYS)
+		snprintf(buf, sizeof(buf),
+			 "lock-classes [%lu]", nr_lock_classes);
 
-	pr_info("debug_locks is off at [%lld.%06lu]\n",
-		sec_high(debug_locks_off_ts),
-		sec_low(debug_locks_off_ts));
+	if (nr_list_entries >= MAX_LOCKDEP_ENTRIES)
+		snprintf(buf, sizeof(buf),
+			 "direct dependencies [%lu]", nr_list_entries);
+#ifdef CONFIG_PROVE_LOCKING
+	if (nr_lock_chains >= MAX_LOCKDEP_CHAINS)
+		snprintf(buf, sizeof(buf),
+			 "dependency chains [%lu]", nr_lock_chains);
 
-	if (nr_lock_classes >= MAX_LOCKDEP_KEYS ||
-	    nr_list_entries >= MAX_LOCKDEP_ENTRIES ||
-	    nr_lock_chains >= MAX_LOCKDEP_CHAINS ||
-	    nr_chain_hlocks > MAX_LOCKDEP_CHAIN_HLOCKS ||
-	    nr_stack_trace_entries >= MAX_STACK_TRACE_ENTRIES - 1) {
-		pr_info("lock_classes[%lu] list_entries[%lu] lock_chains[%lu]\n",
-			nr_lock_classes, nr_list_entries, nr_lock_chains);
-		pr_info("chain_hlocks[%d] stack_trace_entries[%lu]\n",
-			nr_chain_hlocks, nr_stack_trace_entries);
+	if (nr_chain_hlocks > MAX_LOCKDEP_CHAIN_HLOCKS)
+		snprintf(buf, sizeof(buf),
+			 "dependency chain hlocks [%d]", nr_chain_hlocks);
+#endif
+	if (nr_stack_trace_entries >= MAX_STACK_TRACE_ENTRIES - 1)
+		snprintf(buf, sizeof(buf),
+			 "stack-trace entries [%lu]", nr_stack_trace_entries);
+
+	/* check debug_locks per 10 seconds */
+	time_sec = sec_high(sched_clock());
+	if (!debug_locks && !do_div(time_sec, 10)) {
+		pr_info("debug_locks is off [%lld.%06lu] %s\n",
+			sec_high(debug_locks_off_ts),
+			sec_low(debug_locks_off_ts), buf);
 	}
 }
 
@@ -5833,21 +5819,8 @@ void lock_monitor_init(void)
 
 	kthread_run(lock_monitor_work, NULL, "lock_monitor");
 }
-
-static void lock_monitor_aee(void)
+#else
+void check_held_locks(int force)
 {
-	char aee_str[40];
-
-	if (!is_critical_lock_held()) {
-		snprintf(aee_str, 40, "[%s]held locks too much", current->comm);
-#ifdef CONFIG_MTK_AEE_FEATURE
-		aee_kernel_warning_api(__FILE__, __LINE__,
-			DB_OPT_DUMMY_DUMP | DB_OPT_FTRACE,
-			aee_str, "Lock Monitor Warning\n");
-#endif
-	}
 }
-#else /* !MTK_LOCK_MONITOR */
-void check_held_locks(int force) {}
-static void lock_monitor_aee(void) {}
-#endif /* MTK_LOCK_MONITOR */
+#endif
