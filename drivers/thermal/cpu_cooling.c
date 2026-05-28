@@ -299,8 +299,10 @@ static int cpufreq_set_cur_state(struct thermal_cooling_device *cdev,
 	 * In either cases, we won't end up updating cpufreq_state if
 	 * there is an error from any of the two methods.
 	 */
-	if (ret >= 0)
+	if (ret >= 0) {
 		cpufreq_cdev->cpufreq_state = state;
+		ret = 0;
+	}
 
 	return ret;
 }
