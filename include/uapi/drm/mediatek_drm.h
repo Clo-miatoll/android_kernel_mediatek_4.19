@@ -569,7 +569,11 @@ struct drm_mtk_layer_config {
 	__u8 secure;
 };
 
+#ifdef CONFIG_DRM_MEDIATEK_LEGACY
+#define LYE_CRTC 3
+#else
 #define LYE_CRTC 4
+#endif
 struct drm_mtk_layering_info {
 	struct drm_mtk_layer_config *input_config[LYE_CRTC];
 	int disp_mode[LYE_CRTC];
@@ -579,8 +583,10 @@ struct drm_mtk_layering_info {
 	int gles_head[LYE_CRTC];
 	int gles_tail[LYE_CRTC];
 	int hrt_num;
+#ifndef CONFIG_DRM_MEDIATEK_LEGACY 
 	__u32 disp_idx;
 	__u32 disp_list;
+#endif
 	/* res_idx: SF/HWC selects which resolution to use */
 	int res_idx;
 	uint32_t hrt_weight;
