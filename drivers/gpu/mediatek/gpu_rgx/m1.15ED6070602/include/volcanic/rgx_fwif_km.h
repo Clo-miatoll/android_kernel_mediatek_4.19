@@ -752,8 +752,10 @@ typedef struct
 	IMG_UINT32  ui32CtxStateFlags;		/*!< Target buffer and other flags */
 } RGXFWIF_COMPUTECTX_STATE;
 
+#ifndef CONFIG_MTK_GPU_PVR_LEGACY
 #define RGXFWIF_CONTEXT_MISC_FLAGS_STATS_PENDING   (1U << 0)
 #define RGXFWIF_CONTEXT_MISC_FLAGS_HAS_DEFER_COUNT (1U << 1)
+#endif
 
 typedef struct RGXFWIF_FWCOMMONCONTEXT_
 {
@@ -787,8 +789,12 @@ typedef struct RGXFWIF_FWCOMMONCONTEXT_
 
 	IMG_BOOL				bGeomOOMDisabled;		/*!< True when Geom DM OOM is not allowed */
 
+#ifdef CONFIG_MTK_GPU_PVR_LEGACY
+	IMG_BOOL				bStatsPending;			/*!< True when some stats are pending */
+#else
 	/* Misc and compatibility flags */
 	IMG_UINT32				ui32MiscFlags;
+#endif
 
 	/* Statistic updates waiting to be passed back to the host... */
 	IMG_INT32				i32StatsNumStores;		/*!< Number of stores on this context since last update */
@@ -804,8 +810,10 @@ typedef struct RGXFWIF_FWCOMMONCONTEXT_
 	IMG_UINT32				ui32MaxDeadlineMS;			/*!< Max HWR deadline limit in ms */
 	bool					bReadOffsetNeedsReset;			/*!< Following HWR circular buffer read-offset needs resetting */
 
+#ifndef CONFIG_MTK_GPU_PVR_LEGACY
 	IMG_UINT32				ui32DeferCount;
 	/*!< Number of context defers before forced scheduling of context */
+#endif
 } UNCACHED_ALIGN RGXFWIF_FWCOMMONCONTEXT;
 
 typedef IMG_UINT64 RGXFWIF_TRP_CHECKSUM_2D[RGX_TRP_MAX_NUM_CORES][2];
